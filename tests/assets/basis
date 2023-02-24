@@ -1,0 +1,37 @@
+using ASE, JuLIP, ACE1, ACE1x
+using ACE1: transformed_jacobi, transformed_jacobi_env
+
+pin = 2
+pcut = 2
+ninc = (pcut + pin) * (basis_info["cor_order"]-1)
+maxn = basis_info["maxdeg_ACE"] + ninc 
+
+trans = PolyTransform(1, basis_info["r_0"])
+Pr = transformed_jacobi(maxn, trans, basis_info["r_cut_ACE"], basis_info["r_in"]; pcut = pin, pin = pin)
+
+D = ACE1.RPI.SparsePSHDegree()
+
+rpibasis = ACE1x.Pure2b.pure2b_basis(species = AtomicNumber.(Symbol.(basis_info["elements"])),
+                           Rn=Pr, 
+                           D=D,
+                           maxdeg=basis_info["maxdeg_ACE"], 
+                           order=basis_info["cor_order"], 
+                           delete2b = true)
+
+trans_r = AgnesiTransform(; r0=basis_info["r_0"], p = 2)
+
+pair = pair_basis(species = Symbol.(basis_info["elements"]),
+       r0 = basis_info["r_0"],
+       trans=trans,
+       maxdeg = basis_info["maxdeg_pair"],
+       rcut = basis_info["r_cut_pair"],
+       rin = 0.0,
+       pin = 0 )
+
+# envelope_r = ACE1.PolyEnvelope(2, basis_info["r_in"] - 0.05, basis_info["r_cut_pair"])
+# Jnew = transformed_jacobi_env(maxdeg_pair, trans_r, envelope_r, basis_info["r_cut_pair"])
+# pair = PolyPairBasis(Jnew, Symbol.(elements))
+
+B = JuLIP.MLIPs.IPSuperBasis([pair, rpibasis]);
+B_length = length(B)
+P_diag = nothing
