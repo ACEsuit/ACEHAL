@@ -254,6 +254,9 @@ def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kw
         else:
             k = Psi.shape[1]    
 
+        print("k: ", k)
+        print("Psi.shape[1]: ", Psi.shape[1])
+
         if score == "BIC":
             residuals = Psi @ coef - Y
             trial_score = n * np.log(np.mean(residuals ** 2)) + k * np.log(n)
