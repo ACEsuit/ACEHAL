@@ -1,4 +1,4 @@
-params = ["elements", "cor_order", "maxdeg", "r_cut"]
+params = ["elements", "cor_order", "maxdeg", "r_cut", "smoothness_prior"]
 
 source = """using ACE1x
 
@@ -13,5 +13,9 @@ source = """using ACE1x
                         rcut = r_cut)
 
             B_length = length(B)
-            P_diag = nothing
+            if typeof(basis_info["smoothness_prior"]) == String && lowercase(basis_info["smoothness_prior"]) == "none"
+                P_diag = nothing
+            elseif typeof(basis_info["smoothness_prior"][1]) == String && lowercase(basis_info["smoothness_prior"][1]) == "algebraic"
+                P_diag = diag(smoothness_prior(B; p = basis_info["smoothness_prior"][2]))
+            end
             """

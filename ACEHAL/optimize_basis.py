@@ -13,6 +13,8 @@ from optuna.trial import TrialState
 import timeout_decorator
 from timeout_decorator.timeout_decorator import TimeoutError
 
+import sklearn
+
 from .basis import define_basis
 from .fit import fit
 
@@ -248,7 +250,7 @@ def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kw
 
         n = Psi.shape[0]
 
-        if hasattr(solver, 'threshold_lambda'):
+        if isinstance(solver, sklearn.linear_model.BayesianRidge):
             included_c = solver.lambda_ < solver.threshold_lambda
             k = sum(included_c)
         else:
