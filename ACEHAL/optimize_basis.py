@@ -13,7 +13,10 @@ from optuna.trial import TrialState
 import timeout_decorator
 from timeout_decorator.timeout_decorator import TimeoutError
 
-import sklearn
+try:
+    from sklearn.linear_model import ARDRegression as sklearn_ARDRegression
+except ModuleNotFoundError:
+    sklearn_ARDRegression = None
 
 from .basis import define_basis
 from .fit import fit
@@ -250,7 +253,7 @@ def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kw
 
         n = Psi.shape[0]
 
-        if isinstance(solver, sklearn.linear_model.BayesianRidge):
+        if sklearn_ARDRegression is not None and isinstance(solver, sklearn_ARDRegression):
             included_c = solver.lambda_ < solver.threshold_lambda
             k = sum(included_c)
         else:

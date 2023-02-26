@@ -13,9 +13,12 @@ source = """using ACE1x
                         rcut = r_cut)
 
             B_length = length(B)
-            if typeof(basis_info["smoothness_prior"]) == String && lowercase(basis_info["smoothness_prior"]) == "none"
+            if basis_info["smoothness_prior"][1] isa String && lowercase(basis_info["smoothness_prior"][1]) == "none"
                 P_diag = nothing
-            elseif typeof(basis_info["smoothness_prior"][1]) == String && lowercase(basis_info["smoothness_prior"][1]) == "algebraic"
+            elseif basis_info["smoothness_prior"][1] isa String && basis_info["smoothness_prior"][2] isa Number && lowercase(basis_info["smoothness_prior"][1]) == "algebraic"
                 P_diag = diag(smoothness_prior(B; p = basis_info["smoothness_prior"][2]))
+            else
+                @warn("Unkown smoothness_prior!")
+                P_diag = nothing
             end
             """
