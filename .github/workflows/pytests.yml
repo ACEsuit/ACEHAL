@@ -48,7 +48,7 @@ jobs:
           julia -e 'using Pkg; Pkg.instantiate()'
 
       - name: Install dependencies from pip
-        run: pip install wheel setuptools flake8 pytest pytest-cov
+        run: pip install wheel setuptools flake8 pytest pytest-cov scikit-learn
 
       - name: Install ACEHAL, really just for dependencies
         run: pip install .
