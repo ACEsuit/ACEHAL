@@ -91,14 +91,38 @@ def test_T_ramp(fit_data, monkeypatch, tmp_path):
     basis_dependency_source_target = ("cor_order", "maxdeg")
     do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path, T_K=(100, 1000))
 
-    # make sure cell changed at least a little
+    # make sure temperature ramped up
     traj = []
     for f in glob.glob("test_HAL.traj.it_*.extxyz"):
         ats = ase.io.read(f, ":")
         if len(ats) > len(traj):
             traj = ats
+    # at least 1000 steps
     assert len(traj) > 100
+    # check T ramp for last 250 to 100..350
     assert np.mean([at.get_kinetic_energy() for at in traj[-25:]]) / np.mean([at.get_kinetic_energy() for at in traj[10:10+25]]) > 3.0
+
+
+def test_per_config_params(fit_data, monkeypatch, tmp_path):
+    fixed_basis_info = {"r_cut": 5.0, "r_0": 3.0, "r_in": 2.0, "pairs_r_dict": {}}
+
+    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 8))}
+    basis_dependency_source_target = ("cor_order", "maxdeg")
+    do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
+                T_K=[(100, 1000)], P_GPa=[(0.25 0.5), (0.5, 1.0)])
+
+    # make sure temperature ramped up
+    traj = []
+    for f in glob.glob("test_HAL.traj.it_*.extxyz"):
+        ats = ase.io.read(f, ":")
+        if len(ats) > len(traj):
+            traj = ats
+    # at least 1000 steps
+    assert len(traj) > 100
+    # check T ramp for last 250 to 100..350
+    assert np.mean([at.get_kinetic_energy() for at in traj[-25:]]) / np.mean([at.get_kinetic_energy() for at in traj[10:10+25]]) > 3.0
+    # checlk that cell changed
+    assert not np.all(traj[0].cell == traj[-1].cell)
 
 
 def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path, T_K=1000.0, P_GPa=None):
@@ -119,8 +143,22 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
 
     n_iters = 10
 
+    # copy per-config params
+    starting_configs = [at.copy() for at in fit_configs]
+    for at_i, at in enumerate(starting_configs):
+        if isinstance(T_K, list):
+            at.info["HAL_traj_params"] = at.info.get("HAL_traj_params", {})
+            at.info["HAL_traj_params"]["T_K"] = T_K[at_i % len(T_K)]
+        if isinstance(P_GPa, list):
+            at.info["HAL_traj_params"] = at.info.get("HAL_traj_params", {})
+            at.info["HAL_traj_params"]["P_GPa"] = P_GPa[at_i % len(P_GPa)]
+    if isinstance(T_K, list):
+        T_K = 1000.0
+    if isinstance(P_GPa, list):
+        P_GPa = None
+
     new_fit_configs, basis_info, new_test_configs = HAL(
-            fit_configs, fit_configs, basis_source, solver,
+            fit_configs, starting_configs, basis_source, solver,
             fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights},
             n_iters=n_iters, ref_calc=EMT(),
             traj_len=2000, dt=1.0, tol=0.2, tau_rel=0.2, T_K=T_K, P_GPa=P_GPa,
