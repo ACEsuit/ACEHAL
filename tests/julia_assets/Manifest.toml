@@ -14,7 +14,7 @@ version = "0.10.6"
 deps = ["ACE1", "JuLIP", "LinearAlgebra", "SparseArrays"]
 git-tree-sha1 = "fe5697ee7755f82520cfdb07b467071aee793cad"
 repo-rev = "main"
-repo-url = "ssh://git@github.com/ACEsuit/ACE1x.jl.git"
+repo-url = "https://github.com/ACEsuit/ACE1x.jl.git"
 uuid = "5cc4c08c-8782-4a30-af6d-550b302e9707"
 version = "0.0.1"
 
