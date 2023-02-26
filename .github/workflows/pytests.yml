@@ -40,11 +40,10 @@ jobs:
 
       - name: Install julia packages
         run: |
-          export JULIA_PROJECT=tests/julia_assets
-          echo "PWD $PWD"
-          ls
-          echo "JULIA_PROJECT $JULIA_PROJECT"
-          julia -e "using Pkg; Pkg.Registry.add(\"https://github.com/ACEsuit/ACEregistry\"); Pkg.update()"
+          export JULIA_PROJECT=${PWD}/tests/julia_assets
+          echo "JULIA_PROJECT ${JULIA_PROJECT}"
+          ls $JULIA_PROJECT
+          julia -e 'using Pkg; Pkg.Registry.add("https://github.com/JuliaRegistries/General"); Pkg.Registry.add("https://github.com/ACEsuit/ACEregistry"); Pkg.instantiate()'
 
       - name: Install dependencies from pip
         run: pip install wheel setuptools flake8 pytest pytest-cov
