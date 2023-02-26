@@ -43,7 +43,9 @@ jobs:
           export JULIA_PROJECT=${PWD}/tests/julia_assets
           echo "JULIA_PROJECT ${JULIA_PROJECT}"
           ls $JULIA_PROJECT
-          julia -e 'using Pkg; Pkg.Registry.add("https://github.com/JuliaRegistries/General"); Pkg.Registry.add("https://github.com/ACEsuit/ACEregistry"); Pkg.instantiate()'
+          julia -e 'using Pkg; Pkg.Registry.add("General")'
+          julia -e 'using Pkg; Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/ACEsuit/ACEregistry"))'
+          julia -e 'using Pkg; Pkg.instantiate()'
 
       - name: Install dependencies from pip
         run: pip install wheel setuptools flake8 pytest pytest-cov
