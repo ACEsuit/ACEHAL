@@ -46,6 +46,8 @@ jobs:
           julia -e 'using Pkg; Pkg.Registry.add("General")'
           julia -e 'using Pkg; Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/ACEsuit/ACEregistry"))'
           julia -e 'using Pkg; Pkg.instantiate()'
+          # won't be necessary once ACEHAL.bases.smooth is gone, to be replaced by new default
+          julia -e 'using Pkg; Pkg.add("ACE1pack")'
 
       - name: Install dependencies from pip
         run: pip install wheel setuptools flake8 pytest pytest-cov scikit-learn
