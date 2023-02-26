@@ -122,8 +122,8 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
     new_fit_configs, basis_info, new_test_configs = HAL(
             fit_configs, fit_configs, basis_source, solver,
             fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights},
-            n_iters=n_iters, traj_len=2000, tol=0.2, tol_eps=0.1, tau_rel=0.2, 
-            ref_calc=EMT(), dt=1.0, T_K=T_K, T_tau=100, P_GPa=P_GPa,
+            n_iters=n_iters, ref_calc=EMT(),
+            traj_len=2000, dt=1.0, tol=0.2, tau_rel=0.2, T_K=T_K, P_GPa=P_GPa,
             basis_optim_kwargs={"n_trials": 20,
                                 "max_basis_len": 200,
                                 "fixed_basis_info": fixed_basis_info,
