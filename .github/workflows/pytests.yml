@@ -38,6 +38,14 @@ jobs:
       - name: Install julia from conda-forge
         run: conda install -c conda-forge  julia
 
+      - name: Install julia packages
+        run: |
+          export JULIA_PROJECT=tests/julia_assets
+          echo "PWD $PWD"
+          ls
+          echo "JULIA_PROJECT $JULIA_PROJECT"
+          julia -e "using Pkg; Pkg.update()"
+
       - name: Install dependencies from pip
         run: pip install wheel setuptools flake8 pytest pytest-cov
 
