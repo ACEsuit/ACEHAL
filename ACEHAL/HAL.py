@@ -193,7 +193,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs,
                 if cell_mc is not None:
                     dyn.attach(cell_mc, interval=cell_step_interval)
                 
-                if swap_step_interval != 0:
+                if swap_step_interval > 0:
                     swap_mc = SwapMC(traj_config, T_K_cur, P_GPa_cur)
                     dyn.attach(swap_mc, interval=swap_step_interval)
 

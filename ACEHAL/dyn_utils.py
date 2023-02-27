@@ -77,33 +77,23 @@ class SwapMC:
 
         atoms = self.atoms
 
-        E_prev = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
-        
-        els = atoms.get_chemical_symbols()
-        ms = atoms.get_masses()
+        E_prev = atoms.get_potential_energy() 
 
-        found = False
-        while found == False:
-            i1, i2 = np.random.randint(len(atoms), size=2) 
-            el1, el2 = els[i1], els[i2]
-            if el1 != el2:
-                found = True
+        i1 = np.random.randint(len(atoms))
+        i_other = np.where(atoms.numbers != atoms.numbers[i1])[0]
+        if len(i_other) == 0:
+            print("Performing swap step but only single element found!")
+        i2 = np.random.choice(i_other)
 
-        m1, m2 = ms[i1], ms[i2]
-        el1, el2 = els[i1], els[i2]
+        pos1, pos2 = atoms.positions[i1], atoms.positions[i2]
+        atoms.positions[i1], atoms.positions[i2] = pos2, pos1
 
-        atoms[i1].symbol, atoms[i1].mass = el2, m2
-        atoms[i2].symbol, atoms[i2].mass = el1, m1
-
-        E_new = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
+        E_new = atoms.get_potential_energy() 
 
         if np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
-            atoms[i1].symbol, atoms[i1].mass = el2, m2
-            atoms[i2].symbol, atoms[i2].mass = el1, m1
+            print(f"Accepted swap cell step dE {E_new - E_prev}")
         else:
-            atoms[i1].symbol, atoms[i1].mass = el1, m1
-            atoms[i2].symbol, atoms[i2].mass = el2, m2
-
+            atoms.positions[i1], atoms.positions[i2] = pos1, pos2
 
 class HALTolExceeded(Exception):
     pass
