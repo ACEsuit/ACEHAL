@@ -16,6 +16,11 @@ from optuna.trial import TrialState
 import timeout_decorator
 from timeout_decorator.timeout_decorator import TimeoutError
 
+try:
+    from sklearn.linear_model import ARDRegression as sklearn_ARDRegression
+except ModuleNotFoundError:
+    sklearn_ARDRegression = None
+
 from .basis import define_basis
 from .fit import fit
 
@@ -250,7 +255,12 @@ def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kw
         calc, Psi, Y, coef, _ = fit(fitting_db, solver, B_len_norm, return_linear_problem=True, **fit_kwargs_use)
 
         n = Psi.shape[0]
-        k = Psi.shape[1]
+
+        if sklearn_ARDRegression is not None and isinstance(solver, sklearn_ARDRegression):
+            included_c = solver.lambda_ < solver.threshold_lambda
+            k = sum(included_c)
+        else:
+            k = Psi.shape[1]    
 
         if score == "BIC":
             residuals = Psi @ coef - Y
