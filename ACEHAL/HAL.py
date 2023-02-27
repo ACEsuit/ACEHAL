@@ -12,7 +12,7 @@ from ase.md.langevin import Langevin
 from ACEHAL.fit import fit
 from ACEHAL.basis import define_basis
 from ACEHAL.bias_calc import BiasCalculator, TauRelController
-from ACEHAL.optimize_basis import optimize, estimate_dists_per_pair
+from ACEHAL.optimize_basis import optimize
 
 from ACEHAL.dyn_utils import CellMC, HALMonitor, HALTolExceeded
 from ACEHAL import viz
@@ -20,7 +20,7 @@ from ACEHAL import viz
 def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, ref_calc,
         traj_len, dt, tol, tau_rel, T_K, P_GPa=None, T_tau=100.0, tol_eps=0.1, tau_hist=100,
         cell_step_interval=10, cell_step_mag=0.01,
-        default_basis_info=None, basis_optim_kwargs=None, basis_estimate_dists="min", basis_optim_interval=None,
+        default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
         file_root=None, traj_interval=10, test_fraction=0.0):
     """Iterate with hyperactive learning
 
@@ -75,9 +75,6 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         or None for no optimization. Usually includes "n_trials", "fixed_basis_info", "optimize_params",
         "max_basis_len", and perhaps "score" or "seed".  Arguments that will be provided by HAL are "solver",
         "fitting_db", "basis_kwargs", and "fit_kwargs".
-    basis_estimate_dists: "min" / "mean" / False
-        If not False, estimate distances ("r_in_pairs", "r_in_elems", "r_in_global", and same for "r_0_*")
-        from data, and string value indicates method for estimating "r_0_global"
     basis_optim_interval: int, default None
         interval (in HAL iterations, whether or not they generate configs added to fitting database)
         between re-optimizing basis, None to only optimize in initial step.
@@ -95,8 +92,6 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
     if test_fraction > 0.0:
         test_configs: list(Atoms) with test set configurations
     """
-
-    assert basis_estimate_dists in ["min", "mean", False]
 
     default_traj_params = {"traj_len": traj_len,
                            "dt": dt,
@@ -126,7 +121,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         B_len_norm = define_basis(default_basis_info, basis_source)
     elif basis_optim_kwargs is not None:
         t0 = time.time()
-        basis_info = _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_kwargs, basis_estimate_dists)
+        basis_info = _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_kwargs)
         B_len_norm = define_basis(basis_info, basis_source)
         print("TIMING initial_basis_optim", time.time() - t0)
     else:
@@ -179,7 +174,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             traj_filename = None
         hal_monitor = HALMonitor(traj_config, tol, tol_eps, tau_rel_control, traj_file=traj_filename, traj_interval=traj_interval)
 
-        def _make_ramps(*args, n_stages=20)
+        def _make_ramps(*args, n_stages=20):
             if not any([isinstance(arg, (tuple, list)) for arg in args]):
                 n_stages = 1
 
@@ -189,9 +184,9 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                     assert len(setting) == 2, "Got ramp for item with other than 2 elements {setting}"
                     settings_out.append(np.linspace(setting[0], setting[1], n_stages))
                 else:
-                    settings_out.append([setting] * n_stages
+                    settings_out.append([setting] * n_stages)
 
-            return n_stages, args
+            return n_stages, settings_out
 
         # set up T and P ramps
         n_stages, (ramp_tau_rels, ramp_Ts, ramp_Ps) = _make_ramps(tau_rel, T_K, P_GPa, n_stages=20)
@@ -199,7 +194,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         t0 = time.time()
         # run dynamics for entire T ramp
         try:
-            for rau_rel_cur, T_K_cur, P_GPa_cur in zip(ramp_tau_rels, ramp_Ts, ramp_Ps):
+            for tau_rel_cur, T_K_cur, P_GPa_cur in zip(ramp_tau_rels, ramp_Ts, ramp_Ps):
                 if P_GPa_cur is not None:
                     # attachment to do cell steps
                     # E = N B strain^2
@@ -296,7 +291,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             t0 = time.time()
             # optimize basis
             basis_info = _optimize_basis(fit_configs + new_fit_configs, basis_source, solver, fit_kwargs,
-                                         basis_optim_kwargs, basis_estimate_dists)
+                                         basis_optim_kwargs)
             print("HAL got optimized basis", basis_info)
             B_len_norm = define_basis(basis_info, basis_source)
             # reset calculator to trigger a it with the new basis based on the optimized basis_info
@@ -317,62 +312,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         return new_fit_configs, basis_info
 
 
-def _estimate_dists(configs, basis_optim_kwargs, basis_estimate_dists):
-    """estimate r_0 and r_in, and store per-pair, per-element, and
-    global values in existing or new basis_optim_kwargs["fixed_basis_info"]
-
-    Modifies basis_optim_kwargs["fixed_basis_info"]
-
-    Parameters
-    ----------
-    configs: list(Atoms)
-        atomic configs to get dists from
-    basis_optim_kwargs: dict
-        keyword args for optimize_basis, in particular "fixed_basis_info"
-    basis_estimate_dists: "min" / "mean"
-        method to compute per-element and global r_0 from per pair value (r_in is always min)
-    """
-    assert basis_estimate_dists in ["min", "mean"]
-
-    # raw per-pair distances
-    r_in_pairs, r_0_pairs = estimate_dists_per_pair(configs)
-
-    # NOTE: not obvious if reduction to per elemenet and global values should use
-    # each species pair once (as it is now), or once as (s0, s1) and once as (s1, s0). 
-    # Possibly they should actually be derived from separately computed RDFs with
-    # appropriate filtering.
-
-    if basis_estimate_dists == "min":
-        r_0_global_func = np.min
-    else:
-        r_0_global_func = np.mean
-
-    # per-element values from min (r_in) or mean (r_0) over pairs that contain each element
-    syms = set([sym for sym, _ in r_in_pairs] + [sym for _, sym in r_in_pairs])
-    r_in_elems = {sym: np.min([v for k, v in r_in_pairs.items() if sym in k]) for sym in syms}
-    r_0_elems = {sym: r_0_global_func([v for k, v in r_0_pairs.items() if sym in k]) for sym in syms}
-
-    # global values from min (r_in) and selected method (r_0) over all pairs
-    r_in_global = np.min(list(r_in_pairs.values()))
-    r_0_global = r_0_global_func(list(r_0_pairs.values()))
-
-    fixed_basis_info = basis_optim_kwargs.get("fixed_basis_info", {})
-
-    fixed_basis_info["pairs_r_dict"] = {sym_pair: {"r_in": r_in_pairs[sym_pair], "r_0": r_0_pairs[sym_pair]} for sym_pair in r_in_pairs}
-    fixed_basis_info["elems_r_dict"] = {sym: {"r_in": r_in_elems[sym], "r_0": r_0_elems[sym]} for sym in r_in_elems}
-    fixed_basis_info["r_0"] = r_0_global
-    fixed_basis_info["r_in"] = r_in_global
-
-    print("HAL estimated dists r_pairs", pformat(fixed_basis_info["pairs_r_dict"]))
-    print("HAL estimated dists r_elems", pformat(fixed_basis_info["elems_r_dict"]))
-    print("HAL estimate dists global r_in", r_in_global, "r_0", r_0_global)
-
-    if "fixed_basis_info" not in basis_optim_kwargs:
-        # if it's a new field, add it
-        basis_optim_kwargs["fixed_basis_info"] = fixed_basis_info
-
-
-def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_kwargs, basis_estimate_dists):
+def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_kwargs):
     """Optimize a basis
 
     Parameters
@@ -387,17 +327,11 @@ def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_k
         keyword args for fit()
     basis_optim_kwargs: dict
         keyword args for optimize_basis()
-    basis_estimate_dists: "min" / "mean" / False, default "min"
-        If not False, estimate distances ("r_in_pairs", "r_in_elems", "r_in_global", and same for "r_0_*")
-        from data, and string value indicates method for estimating "r_0_global"
 
     Returns
     -------
     basis_info dict with parameters that can be passed to define_basis()
     """
-    if basis_estimate_dists:
-        _estimate_dists(fit_configs, basis_optim_kwargs, basis_estimate_dists)
-
     # do the optimization
     basis_info = optimize(solver=solver, fitting_db=fit_configs,
             basis_kwargs={"julia_source": basis_source},
