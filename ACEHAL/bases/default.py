@@ -6,6 +6,7 @@ source = """using ACE1x
             cor_order = basis_info["cor_order"]
             maxdeg = basis_info["maxdeg"]
             r_cut = basis_info["r_cut"]
+            smoothness_prior_param = basis_info["smoothness_prior"]
             
             B = ACE1x.ace_basis(elements = Symbol.(elements), 
                         order = cor_order, 
@@ -13,12 +14,11 @@ source = """using ACE1x
                         rcut = r_cut)
 
             B_length = length(B)
-            if basis_info["smoothness_prior"][1] isa String && lowercase(basis_info["smoothness_prior"][1]) == "none"
+            if isnothing(smoothness_prior_param)
                 P_diag = nothing
-            elseif basis_info["smoothness_prior"][1] isa String && basis_info["smoothness_prior"][2] isa Number && lowercase(basis_info["smoothness_prior"][1]) == "algebraic"
-                P_diag = diag(smoothness_prior(B; p = basis_info["smoothness_prior"][2]))
+            elseif smoothness_prior_param[1] isa String && smoothness_prior_param[2] isa Number && lowercase(smoothness_prior_param[1]) == "algebraic"
+                P_diag = diag(smoothness_prior(B; p = smoothness_prior_param[2]))
             else
-                @warn("Unkown smoothness_prior!")
-                P_diag = nothing
+                throw(ArgumentError("Unknown smoothness_prior"))
             end
             """

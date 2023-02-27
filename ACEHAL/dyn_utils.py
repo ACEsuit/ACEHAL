@@ -7,6 +7,8 @@ import ase.io
 class CellMC:
     """ASE trajectory attachment that does cell MC steps
 
+    Sets CellMC.accept list with # of acceptances, # of trials
+
     Parameters
     ----------
     atoms: Atoms
@@ -26,6 +28,7 @@ class CellMC:
         self.P_mag = mag
 
         self.last_write_step = -1
+        self.accept = [0, 0]
 
     def __call__(self):
         """Do ASE dynamics trajectory attachment action"""
@@ -46,8 +49,11 @@ class CellMC:
         E_prev = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
         atoms.set_cell(orig_cell @ F, True)
         E_new = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
+
+        self.accept[1] += 1
         if np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
             print(f"Accepted MC cell step from {orig_cell} to {atoms.cell} dE {E_new - E_prev}")
+            self.accept[0] += 1
         else:
             # reject
             atoms.set_cell(orig_cell, True)
