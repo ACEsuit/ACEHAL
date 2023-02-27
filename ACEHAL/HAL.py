@@ -17,10 +17,10 @@ from ACEHAL.optimize_basis import optimize, estimate_dists_per_pair
 from ACEHAL.dyn_utils import SwapMC, CellMC, HALMonitor, HALTolExceeded
 from ACEHAL import viz
 
-def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs,
-        n_iters, traj_len, tol, tol_eps, tau_rel, ref_calc, dt, T_K, T_tau,
-        P_GPa=None, swap_step_interval=0, cell_step_interval=10, cell_step_mag=0.01,
-        tau_hist=100, default_basis_info=None, basis_optim_kwargs=None, basis_estimate_dists="min", basis_optim_interval=None,
+def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, ref_calc,
+        traj_len, dt, tol, tau_rel, T_K, P_GPa=None, T_tau=100.0, tol_eps=0.1, tau_hist=100,
+        cell_step_interval=10, swap_step_interval=0, cell_step_mag=0.01,
+        default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
         file_root=None, traj_interval=10, test_fraction=0.0):
     """Iterate with hyperactive learning
 
