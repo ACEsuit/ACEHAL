@@ -323,9 +323,8 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
             assert sigma.shape[0] == sum(included_c)
 
             sigma_full = np.zeros((len(c_norm), len(c_norm)), dtype=sigma.dtype)
-            sigma_full[included_c, :][:, included_c] = sigma
-
-            sigma = sigma_full
+            inds = np.where(included_c)[0]
+            sigma_full[inds[:, None], inds] += sigma
     else:
         sigma = None
 
