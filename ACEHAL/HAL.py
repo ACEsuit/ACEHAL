@@ -14,12 +14,12 @@ from ACEHAL.basis import define_basis
 from ACEHAL.bias_calc import BiasCalculator, TauRelController
 from ACEHAL.optimize_basis import optimize, estimate_dists_per_pair
 
-from ACEHAL.dyn_utils import CellMC, HALMonitor, HALTolExceeded
+from ACEHAL.dyn_utils import SwapMC, CellMC, HALMonitor, HALTolExceeded
 from ACEHAL import viz
 
 def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs,
         n_iters, traj_len, tol, tol_eps, tau_rel, ref_calc, dt, T_K, T_tau,
-        P_GPa=None, cell_step_interval=10, cell_step_mag=0.01,
+        P_GPa=None, swap_step_interval=0, cell_step_interval=10, cell_step_mag=0.01,
         tau_hist=100, default_basis_info=None, basis_optim_kwargs=None, basis_estimate_dists="min", basis_optim_interval=None,
         file_root=None, traj_interval=10, test_fraction=0.0):
     """Iterate with hyperactive learning
@@ -62,6 +62,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs,
         pressure (in GPa) for dynamics, fixed or range for ramp, None for fixed cell
     cell_step_interval: int, default 25
         interval for attempts of Monte Carlo cell steps
+    swap_step_interval: int, default 0
+        interval for attempts of atom swap steps
     cell_step_mag: float, default 0.01
         magnitude of perturbations for cell MC steps
     tau_hist: int, default 100
@@ -190,6 +192,10 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs,
                 dyn.attach(hal_monitor)
                 if cell_mc is not None:
                     dyn.attach(cell_mc, interval=cell_step_interval)
+                
+                if swap_step_interval != 0:
+                    swap_mc = SwapMC(traj_config, T_K_cur, P_GPa_cur)
+                    dyn.attach(swap_mc, interval=swap_step_interval)
 
                 # run trajectory for this section of T ramp
                 dyn.run(traj_len // len(ramp_Ts))

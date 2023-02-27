@@ -52,6 +52,58 @@ class CellMC:
             # reject
             atoms.set_cell(orig_cell, True)
 
+class SwapMC:
+    """ASE trajectory attachment that does swap MC steps
+
+    Parameters
+    ----------
+    atoms: Atoms
+        atomic configuration
+    temperature_K: float
+        temperature in K
+    P_GPa: float
+        pressure in GPa
+    """
+    def __init__(self, atoms, temperature_K, P_GPa):
+        self.atoms = atoms
+
+        self.T = temperature_K
+        self.P = P_GPa
+
+        self.last_write_step = -1
+
+    def __call__(self):
+        """Do ASE dynamics trajectory attachment action"""
+
+        atoms = self.atoms
+
+        E_prev = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
+        
+        els = atoms.get_chemical_symbols()
+        ms = atoms.get_masses()
+
+        found = False
+        while found == False:
+            i1, i2 = np.random.randint(len(atoms), size=2) 
+            el1, el2 = els[i1], els[i2]
+            if el1 != el2:
+                found = True
+
+        m1, m2 = ms[i1], ms[i2]
+        el1, el2 = els[i1], els[i2]
+
+        atoms[i1].symbol, atoms[i1].mass = el2, m2
+        atoms[i2].symbol, atoms[i2].mass = el1, m1
+
+        E_new = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
+
+        if np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
+            atoms[i1].symbol, atoms[i1].mass = el2, m2
+            atoms[i2].symbol, atoms[i2].mass = el1, m1
+        else:
+            atoms[i1].symbol, atoms[i1].mass = el1, m1
+            atoms[i2].symbol, atoms[i2].mass = el2, m2
+
 
 class HALTolExceeded(Exception):
     pass
