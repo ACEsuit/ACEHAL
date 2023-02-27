@@ -315,23 +315,24 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
     if n_committee > 0:
         sigma = solver.sigma_
 
-        # ARD solver returns sigma only for selected features, but does not indicate which.
-        # Reconstruct full signa, hoping that coeff == 0 implies feature was removed by ARD
+        # sklearn ARDRegression solver returns sigma only for selected features, but does not explicitly
+        # indicate which ones those are.
         if sigma.shape[0] != len(c_norm):
-            # make sure sizes match
-            assert sigma.shape[0] == sum(np.nonzero(c_norm))
+             # only valid for sklearn ARDRegression
+            included_c = solver.lambda_ < solver.threshold_lambda
+            assert sigma.shape[0] == sum(included_c)
 
-            sigma = np.zeros((len(c_norm), len(c_norm)), dtype=float)
-            for (i, non_zero) in enumerate(np.nonzero(c_norm)):
-                coeff = solver.sigma_[i, i]
-                sigma[non_zero, non_zero] = coeff
+            sigma_full = np.zeros((len(c_norm), len(c_norm)), dtype=sigma.dtype)
+            inds = np.where(included_c)[0]
+            sigma_full[inds[:, None], inds] += sigma
 
+            sigma = sigma_full
     else:
         sigma = None
 
-    # create committee coefficients
+     # create committee coefficients
     if n_committee > 0:
-        # make sure that raw coefficients (c_norm) are used, since sigma is scaled to be
+        # make sure that raw coefficients (c_norm) are used, since sigma is still scaled to be
         # consistent with those, and unscale resulting committee coefficients below
         if rng is None:
             comms = np.random.multivariate_normal(c_norm, sigma, size=n_committee)

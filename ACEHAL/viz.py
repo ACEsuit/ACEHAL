@@ -98,7 +98,6 @@ def plot_HAL_traj_data(run_data, trigger_data, plot_file, log_y=["criterion"]):
 
 def plot_dimers(calc, elements, plot_file, max_E_range=(-5.0, 5.0), r_range=(0.5, 10)):
     """Plot E(r) for every possible dimer
-
     Parameters
     ----------
     calc: Calculator
@@ -111,7 +110,6 @@ def plot_dimers(calc, elements, plot_file, max_E_range=(-5.0, 5.0), r_range=(0.5
         max E range to plot
     r_range: (float, float) default (0.5, 10.0)
         range of distances to plot
-
     """
     Zs = sorted(set([ase.data.chemical_symbols.index(sym) for sym in elements]))
     sym_pairs = [(ase.data.chemical_symbols[Z0], ase.data.chemical_symbols[Z1]) for Z0 in Zs for Z1 in Zs if Z0 <= Z1]
@@ -121,6 +119,9 @@ def plot_dimers(calc, elements, plot_file, max_E_range=(-5.0, 5.0), r_range=(0.5
     for sym_pair in sym_pairs:
         rs = np.linspace(r_range[0], r_range[1], 100)
         Es = []
+        at_0 = Atoms(symbols=sym_pair, positions=[[0, 0, 0], [50.0, 50.0, 50.0]], cell=[100.0] * 3, pbc=[False] * 3)
+        at_0.calc = calc
+        E_0 = at_0.get_potential_energy()
         for r in rs:
             at = Atoms(symbols=sym_pair, positions=[[0, 0, 0], [r, 0, 0]], cell=[max(r_range) * 2] * 3, pbc=[False] * 3)
             at.calc = calc
@@ -128,7 +129,7 @@ def plot_dimers(calc, elements, plot_file, max_E_range=(-5.0, 5.0), r_range=(0.5
             if isinstance(calc, BiasCalculator):
                 # require unbiased energy if it's defined
                 E = at.calc.results_extra["unbiased_energy"]
-            Es.append(E)
+            Es.append((E - E_0))
         ax.plot(rs, Es, '-', label="-".join(sym_pair))
 
     ylim = ax.get_ylim()

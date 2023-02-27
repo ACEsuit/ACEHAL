@@ -161,7 +161,7 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
             fit_configs, starting_configs, basis_source, solver,
             fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights},
             n_iters=n_iters, ref_calc=EMT(),
-            traj_len=2000, dt=1.0, tol=0.2, tau_rel=0.2, T_K=T_K, P_GPa=P_GPa,
+            traj_len=2000, dt=1.0, tol=0.4, tau_rel=0.2, T_K=T_K, P_GPa=P_GPa,
             basis_optim_kwargs={"n_trials": 20,
                                 "max_basis_len": 200,
                                 "fixed_basis_info": fixed_basis_info,
@@ -192,3 +192,4 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
     for f in tmp_path.glob("test_HAL.traj.it_*.extxyz"):
         l = len(ase.io.read(f, ":"))
         assert l > 1 and l <= 201
+        print("do_HAL_test got len(traj)", l)
