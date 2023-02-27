@@ -3,7 +3,10 @@ import numpy as np
 from scipy.signal import argrelextrema
 
 import ase.data
-from matscipy.neighbours import neighbour_list as neighbor_list
+try:
+    from matscipy.neighbours import neighbour_list as neighbor_list
+except ModuleNotFoundError:
+    from ase.neighborlist import neighbor_list
 
 import optuna 
 from optuna.samplers import TPESampler
