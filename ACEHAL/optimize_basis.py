@@ -44,11 +44,9 @@ def basis_dependency_range_max(basis_kwargs, fixed_basis_info, optimize_params, 
     source_range = optimize_params[dependency_source][1]
     optimize_params_target = {}
     for source_val in range(source_range[0], source_range[1] + 1):
-        min_target_val = optimize_params[dependency_target][1][0]
+        target_val_range = optimize_params[dependency_target][1]
 
-        target_val = min_target_val
-        basis_len = 0
-        while basis_len <= max_basis_len:
+        for target_val in range(target_val_range[0], target_val_range[1] + 1):
             basis_info = fixed_basis_info.copy()
             for param in optimize_params:
                 basis_info[param] = optimize_params[param][1][0]
@@ -56,10 +54,12 @@ def basis_dependency_range_max(basis_kwargs, fixed_basis_info, optimize_params, 
             basis_info[dependency_target] = target_val
             _, basis_len, _ = define_basis(basis_info=basis_info, **basis_kwargs)
 
-            if basis_len <= max_basis_len:
-                target_val += 1
+            if basis_len > max_basis_len:
+                # overshot
+                target_val -= 1
+                break
 
-        optimize_params_target[source_val] = (min_target_val, target_val - 1)
+        optimize_params_target[source_val] = target_val_range
 
     optimize_params[dependency_target] = ("int", (dependency_source, optimize_params_target))
 

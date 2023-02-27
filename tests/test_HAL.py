@@ -9,107 +9,20 @@ import ase.io
 from ase.calculators.emt import EMT
 from ase.atoms import Atoms
 
-from ACEHAL.HAL import HAL, _estimate_dists
+from ACEHAL.HAL import HAL
 from sklearn.linear_model import BayesianRidge
 from ACEHAL.optimize_basis import basis_dependency_range_max
 
 
-def test_estimate_dists():
-    np.random.seed(10)
+def test_T_P_ramps_and_per_config_params(fit_data, monkeypatch, tmp_path):
+    # test as many variants as possible in 1 run, since test is slow
 
-    atoms_list = []
-    for _ in range(100):
-        atoms = Atoms(symbols='AlAlCuCu', positions=[
-                                          [0   + 0.1 * np.random.normal(), 0.0, 0.0],
-                                          [2.0 + 0.1 * np.random.normal(), 0.0, 0.0],
-                                          [3.0 + 0.1 * np.random.normal(), 0.0, 0.0],
-                                          [5.0 + 0.1 * np.random.normal(), 0.0, 0.0]],
-                      cell=[12] * 3, pbc=[True] * 3)
-        atoms_list.append(atoms)
-
-    basis_optim_kwargs = {}
-    _estimate_dists(atoms_list, basis_optim_kwargs, "min")
-
-    r_pairs_expected =  {('Cu', 'Cu'): {'r_in': 1.6077902819998728, 'r_0': 1.9721091138963613},
-                         ('Al', 'Cu'): {'r_in': 0.639900037104955, 'r_0': 0.8856467607196443},
-                         ('Al', 'Al'): {'r_in': 1.662435385860622, 'r_0': 1.9235919709831029}}
-    r_elems_expected = {'Cu': {'r_in': 0.639900037104955, 'r_0': 0.8856467607196443},
-                        'Al': {'r_in': 0.639900037104955, 'r_0': 0.8856467607196443}}
-
-    r_in_global_expected = 0.639900037104955
-    r_0_global_expected = 0.8856467607196443
-
-    r_pairs = basis_optim_kwargs["fixed_basis_info"]["pairs_r_dict"]
-    r_elems = basis_optim_kwargs["fixed_basis_info"]["elems_r_dict"]
-    assert set(r_pairs.keys()) == set(r_pairs_expected.keys())
-    for sym_pair in r_pairs:
-        for d in ["r_in", "r_0"]:
-            assert r_pairs[sym_pair][d] == pytest.approx(r_pairs_expected[sym_pair][d])
-
-    assert set(r_elems.keys()) == set(r_elems_expected.keys())
-    for sym in r_elems:
-        for d in ["r_in", "r_0"]:
-            assert r_elems[sym][d] == pytest.approx(r_elems_expected[sym][d])
-
-    assert r_in_global_expected == pytest.approx(basis_optim_kwargs["fixed_basis_info"]["r_in"])
-    assert r_0_global_expected == pytest.approx(basis_optim_kwargs["fixed_basis_info"]["r_0"])
-
-
-def test_HAL_basis_default(fit_data, monkeypatch, tmp_path):
-    fixed_basis_info = {"r_cut": 5.0, "r_0": 3.0, "r_in": 2.0, "pairs_r_dict": {}}
-
-    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 8))}
-    basis_dependency_source_target = ("cor_order", "maxdeg")
-    do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path)
-
-
-@pytest.mark.skip(reason="basis too good, trajectory too slow")
-def test_HAL_basis_smooth(fit_data, monkeypatch, tmp_path):
-    fixed_basis_info = {"r_cut_ACE": 5.0, "r_cut_pair": 5.0, "r_0": 3.0, "agnesi_q": 4}
-
-    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg_ACE": ("int", (4, 8)), "maxdeg_pair": ("int", (4, 8))}
-    basis_dependency_source_target = ("cor_order", "maxdeg_ACE")
-    do_HAL_test("ACEHAL.bases.smooth", fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path)
-
-
-def test_cell_mc(fit_data, monkeypatch, tmp_path):
-    fixed_basis_info = {"r_cut": 5.0, "r_0": 3.0, "r_in": 2.0, "pairs_r_dict": {}}
-
-    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 8))}
-    basis_dependency_source_target = ("cor_order", "maxdeg")
-    do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path, P_GPa=(0.0, 1.0))
-
-    # make sure cell changed at least a little
-    traj = ase.io.read("test_HAL.traj.it_09.extxyz", ":")
-    assert not np.all(traj[0].cell == traj[-1].cell)
-
-
-def test_T_ramp(fit_data, monkeypatch, tmp_path):
-    fixed_basis_info = {"r_cut": 5.0, "r_0": 3.0, "r_in": 2.0, "pairs_r_dict": {}}
-
-    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 8))}
-    basis_dependency_source_target = ("cor_order", "maxdeg")
-    do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path, T_K=(100, 1000))
-
-    # make sure temperature ramped up
-    traj = []
-    for f in glob.glob("test_HAL.traj.it_*.extxyz"):
-        ats = ase.io.read(f, ":")
-        if len(ats) > len(traj):
-            traj = ats
-    # at least 1000 steps
-    assert len(traj) > 100
-    # check T ramp for last 250 to 100..350
-    assert np.mean([at.get_kinetic_energy() for at in traj[-25:]]) / np.mean([at.get_kinetic_energy() for at in traj[10:10+25]]) > 3.0
-
-
-def test_per_config_params(fit_data, monkeypatch, tmp_path):
-    fixed_basis_info = {"r_cut": 5.0, "r_0": 3.0, "r_in": 2.0, "pairs_r_dict": {}}
+    fixed_basis_info = {"r_cut": 5.0, "smoothness_prior": None}
 
     optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 8))}
     basis_dependency_source_target = ("cor_order", "maxdeg")
     do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
-                T_K=[(100, 1000)], P_GPa=[(0.25 0.5), (0.5, 1.0)])
+                T_K=[(100, 1000)], P_GPa=[(0.25, 0.5), (0.5, 1.0)])
 
     # make sure temperature ramped up
     traj = []
@@ -117,12 +30,13 @@ def test_per_config_params(fit_data, monkeypatch, tmp_path):
         ats = ase.io.read(f, ":")
         if len(ats) > len(traj):
             traj = ats
-    # at least 1000 steps
-    assert len(traj) > 100
+    # at least 500 steps
+    assert len(traj) > 50
     # check T ramp for last 250 to 100..350
-    assert np.mean([at.get_kinetic_energy() for at in traj[-25:]]) / np.mean([at.get_kinetic_energy() for at in traj[10:10+25]]) > 3.0
-    # checlk that cell changed
+    assert np.mean([at.get_kinetic_energy() for at in traj[-15:]]) / np.mean([at.get_kinetic_energy() for at in traj[5:5+15]]) > 3.0
+    # check that cell changed
     assert not np.all(traj[0].cell == traj[-1].cell)
+    # check something about tau_rel ramp?
 
 
 def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path, T_K=1000.0, P_GPa=None):
@@ -152,6 +66,7 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
         if isinstance(P_GPa, list):
             at.info["HAL_traj_params"] = at.info.get("HAL_traj_params", {})
             at.info["HAL_traj_params"]["P_GPa"] = P_GPa[at_i % len(P_GPa)]
+    # back to boring default values if per-config list was passed in
     if isinstance(T_K, list):
         T_K = 1000.0
     if isinstance(P_GPa, list):
@@ -161,7 +76,7 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
             fit_configs, starting_configs, basis_source, solver,
             fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights},
             n_iters=n_iters, ref_calc=EMT(),
-            traj_len=2000, dt=1.0, tol=0.4, tau_rel=0.2, T_K=T_K, P_GPa=P_GPa,
+            traj_len=1000, dt=1.0, tol=0.3, tau_rel=0.5, T_K=T_K, P_GPa=P_GPa,
             basis_optim_kwargs={"n_trials": 20,
                                 "max_basis_len": 200,
                                 "fixed_basis_info": fixed_basis_info,
@@ -191,5 +106,5 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
 
     for f in tmp_path.glob("test_HAL.traj.it_*.extxyz"):
         l = len(ase.io.read(f, ":"))
-        assert l > 1 and l <= 201
+        assert l > 1 and l <= 101
         print("do_HAL_test got len(traj)", l)
