@@ -134,6 +134,10 @@ class TauRelController():
         self.counter = 0
 
 
+    def set_tau_rel(self, tau_rel):
+        self.tau_rel = tau_rel
+
+
     def update_calc(self, calc):
         """Update internal averages and counters and set new calculator tau
 

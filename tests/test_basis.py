@@ -7,20 +7,26 @@ from ACEHAL import basis
 
 
 def test_basis_default():
-    params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0, 'r_in': 2.0, 'r_0': 3.0, 'pairs_r_dict': {}}
+    params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0, 'smoothness_prior': None}
     B, len_B, normalization = basis.define_basis(params)
     assert len_B == 22
     assert normalization is None
 
+def test_basis_smooth():
+    params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0, 'smoothness_prior': ('algebraic', 2)}
+    B, len_B, normalization = basis.define_basis(params)
+    assert len_B == 22
+    assert len(normalization) == len_B
+
 def test_basis_missing_param():
-    params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0, 'r_in': 2.0, 'pairs_r_dict': {}}
+    params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0}
     with pytest.raises(ValueError):
         B, len_B, normalization = basis.define_basis(params)
 
 def test_basis_extra_param():
-    params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0, 'r_in': 2.0, 'r_alt': 4, 'pairs_r_dict': {}}
-    with pytest.raises(ValueError):
-        B, len_B, normalization = basis.define_basis(params)
+    # extra param OK
+    params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0, 'smoothness_prior': None,'r_alt': 4}
+    B, len_B, normalization = basis.define_basis(params)
 
 def test_basis_str():
     params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg_ACE': 4, 'maxdeg_pair': 8, 'r_cut_ACE': 5.0, 'r_cut_pair': 5.0, 'r_in': 2.0, 'r_0': 3.0}
@@ -36,11 +42,3 @@ def test_basis_str_julia_error():
         julia_source = fin.read()
     with pytest.raises(JuliaError):
         B, len_B, normalization = basis.define_basis(params, julia_source=julia_source)
-
-def test_basis_smooth():
-    params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg_ACE': 4, 'maxdeg_pair': 8,
-              'r_cut_ACE': 5.0, 'r_cut_pair': 5.0, 'r_in': 2.0, 'r_0': 3.0,
-              'agnesi_q': 4}
-    B, len_B, normalization = basis.define_basis(params, julia_source="ACEHAL.bases.smooth")
-    assert len_B == 26
-    assert len(normalization) == len_B

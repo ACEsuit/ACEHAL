@@ -7,6 +7,8 @@ import ase.io
 class CellMC:
     """ASE trajectory attachment that does cell MC steps
 
+    Sets CellMC.accept list with # of acceptances, # of trials
+
     Parameters
     ----------
     atoms: Atoms
@@ -26,6 +28,7 @@ class CellMC:
         self.P_mag = mag
 
         self.last_write_step = -1
+        self.accept = [0, 0]
 
     def __call__(self):
         """Do ASE dynamics trajectory attachment action"""
@@ -46,8 +49,11 @@ class CellMC:
         E_prev = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
         atoms.set_cell(orig_cell @ F, True)
         E_new = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
+
+        self.accept[1] += 1
         if np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
             print(f"Accepted MC cell step from {orig_cell} to {atoms.cell} dE {E_new - E_prev}")
+            self.accept[0] += 1
         else:
             # reject
             atoms.set_cell(orig_cell, True)
@@ -68,7 +74,6 @@ class SwapMC:
         self.atoms = atoms
 
         self.T = temperature_K
-        self.P = P_GPa
 
         self.last_write_step = -1
 
@@ -79,21 +84,30 @@ class SwapMC:
 
         E_prev = atoms.get_potential_energy() 
 
+        els = atoms.get_chemical_symbols()
+        ms = atoms.get_masses()
+        
         i1 = np.random.randint(len(atoms))
         i_other = np.where(atoms.numbers != atoms.numbers[i1])[0]
         if len(i_other) == 0:
             print("Performing swap step but only single element found!")
         i2 = np.random.choice(i_other)
 
-        pos1, pos2 = atoms.positions[i1], atoms.positions[i2]
-        atoms.positions[i1], atoms.positions[i2] = pos2, pos1
+        m1, m2 = ms[i1], ms[i2]
+        el1, el2 = els[i1], els[i2]
+
+        atoms[i1].symbol, atoms[i1].mass = el2, m2
+        atoms[i2].symbol, atoms[i2].mass = el1, m1
 
         E_new = atoms.get_potential_energy() 
 
         if np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
             print(f"Accepted swap cell step dE {E_new - E_prev}")
+            atoms[i1].symbol, atoms[i1].mass = el2, m2
+            atoms[i2].symbol, atoms[i2].mass = el1, m1
         else:
-            atoms.positions[i1], atoms.positions[i2] = pos1, pos2
+            atoms[i1].symbol, atoms[i1].mass = el1, m1
+            atoms[i2].symbol, atoms[i2].mass = el2, m2
 
 class HALTolExceeded(Exception):
     pass
