@@ -89,7 +89,7 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
 
     new_fit_configs, basis_info, new_test_configs = HAL(
             fit_configs, starting_configs, basis_source, solver,
-            fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights},
+            fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights, "Fmax": 20.0},
             n_iters=n_iters, ref_calc=EMT(),
             traj_len=1000, dt=1.0, tol=0.4, tau_rel=0.2, T_K=T_K, P_GPa=P_GPa,
             swap_step_interval=10,
