@@ -39,16 +39,16 @@ jobs:
         run: conda install pip
 
       - name: Install julia packages
-        - run: |
-            export JULIA_PROJECT=${PWD}/tests/julia_assets
-            echo "JULIA_PROJECT ${JULIA_PROJECT}"
-            ls $JULIA_PROJECT
-            julia -e 'using Pkg; Pkg.Registry.add("General")'
-            julia -e 'using Pkg; Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/ACEsuit/ACEregistry"))'
-            julia -e 'using Pkg; Pkg.add("ACE1pack"); Pkg.add("JuLIP"); Pkg.add("ASE"); Pkg.add("ACE1"); Pkg.add("ACE1x")'
-            ## julia -e 'using Pkg; Pkg.instantiate()'
-            ## # won't be necessary once ACEHAL.bases.smooth is gone, to be replaced by new default
-            ## julia -e 'using Pkg; Pkg.add("ACE1pack")'
+        run: |
+          export JULIA_PROJECT=${PWD}/tests/julia_assets
+          echo "JULIA_PROJECT ${JULIA_PROJECT}"
+          ls $JULIA_PROJECT
+          julia -e 'using Pkg; Pkg.Registry.add("General")'
+          julia -e 'using Pkg; Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/ACEsuit/ACEregistry"))'
+          julia -e 'using Pkg; Pkg.add("ACE1pack"); Pkg.add("JuLIP"); Pkg.add("ASE"); Pkg.add("ACE1"); Pkg.add("ACE1x")'
+          ## julia -e 'using Pkg; Pkg.instantiate()'
+          ## # won't be necessary once ACEHAL.bases.smooth is gone, to be replaced by new default
+          ## julia -e 'using Pkg; Pkg.add("ACE1pack")'
 
       - name: Install dependencies from pip
         run: pip install wheel setuptools flake8 pytest pytest-cov scikit-learn
