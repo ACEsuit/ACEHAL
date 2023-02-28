@@ -7,3 +7,5 @@ JuLIP = "945c410c-986d-556a-acb1-167a618e0462"
 
 [compat]
 ACE1pack = "0.3.0"
+ACE1 = "0.11.3"
+ACE1x = "0.0.4"

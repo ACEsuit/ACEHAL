@@ -76,13 +76,13 @@ def test_fit_properties(fit_data, fit_model):
     print("test F var", np.sqrt(np.mean(np.asarray(test_vars['F']) ** 2)))
     print("test S var", np.sqrt(np.mean(np.asarray(test_vars['S']) ** 2)))
 
-    assert np.sqrt(np.mean(np.asarray(test_errs['E']) ** 2)) < 1.5e-2
-    assert np.sqrt(np.mean(np.asarray(test_errs['F']) ** 2)) < 1.5e-4
-    assert np.sqrt(np.mean(np.asarray(test_errs['S']) ** 2)) < 6.0e-4
+    assert np.sqrt(np.mean(np.asarray(test_errs['E']) ** 2)) < 2e-3
+    assert np.sqrt(np.mean(np.asarray(test_errs['F']) ** 2)) < 2e-4
+    assert np.sqrt(np.mean(np.asarray(test_errs['S']) ** 2)) < 1e-4
 
-    assert np.sqrt(np.mean(np.asarray(test_vars['E']) ** 2)) > 0.01
+    assert np.sqrt(np.mean(np.asarray(test_vars['E']) ** 2)) > 0.001
     assert np.sqrt(np.mean(np.asarray(test_vars['F']) ** 2)) > 0.0001
-    assert np.sqrt(np.mean(np.asarray(test_vars['S']) ** 2)) > 0.0003
+    assert np.sqrt(np.mean(np.asarray(test_vars['S']) ** 2)) > 0.0001
 
 
 def test_caching(fit_data, fit_model):

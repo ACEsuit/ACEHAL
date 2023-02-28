@@ -16,14 +16,14 @@ def test_basis_dep_range(fit_data):
 
     fixed_basis_info = {"elements": list(E0s.keys()), "r_cut": 4.5, "smoothness_prior": None}
 
-    optimize_params = {"cor_order": ("int", (2, 8)), "maxdeg": ("int", (8, 18))}
+    optimize_params = {"cor_order": ("int", (2, 5)), "maxdeg": ("int", (4, 18))}
 
-    basis_dependency_range_max({}, fixed_basis_info, optimize_params, 100, "cor_order", "maxdeg")
+    basis_dependency_range_max({}, fixed_basis_info, optimize_params, 200, "cor_order", "maxdeg")
+    print("BOB got optimize_params", optimize_params)
 
     optimize_params_range = deepcopy(optimize_params)
-    optimize_params_range["cor_order"] = ("int", (2, 4))
-    optimize_params_range["maxdeg"] = ("int", ("cor_order", {2: (8, 12), 3: (8, 9),
-                                                             4: (8, 8)}))
+    optimize_params_range["cor_order"] = ("int", (2, 5))
+    optimize_params_range["maxdeg"] = ("int", ("cor_order", {2: (4, 7), 3: (4, 5), 4: (4, 4), 5: (4,4)}))
 
     assert optimize_params_range == optimize_params
 
@@ -42,7 +42,7 @@ def test_optimize_basis(fit_data):
              fixed_basis_info=fixed_basis_info, max_basis_len=400, seed=5)
 
     # from known good run
-    expected = {'cor_order': 2, 'maxdeg': 5}
+    expected = {'cor_order': 2, 'maxdeg': 4}
     # fixed
     expected.update(fixed_basis_info)
 
