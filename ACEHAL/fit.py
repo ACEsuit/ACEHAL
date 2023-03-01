@@ -174,6 +174,7 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
 
         per_config_weight = at.info.get(data_keys["F"] + "_weight", at.info.get(data_keys["F"] + "_weight", 1.0))
         per_atom_weight = at.arrays.get(data_keys["F"] + "_weight", at.arrays.get(data_keys["F"] + "_weight", np.ones(len(at))))
+        per_atom_weight = per_atom_weight[F_filter]
         if len(per_atom_weight.shape) == 1 or per_atom_weight.shape[1] == 1:
             per_atom_weight = np.repeat(per_atom_weight, 3)
         weight_F = (weights["F"] * per_config_weight * per_atom_weight)
