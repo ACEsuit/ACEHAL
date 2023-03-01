@@ -70,7 +70,7 @@ class SwapMC:
     P_GPa: float
         pressure in GPa
     """
-    def __init__(self, atoms, temperature_K, P_GPa):
+    def __init__(self, atoms, temperature_K):
         self.atoms = atoms
 
         self.T = temperature_K
