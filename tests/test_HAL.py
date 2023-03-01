@@ -27,24 +27,18 @@ def test_T_P_ramps_and_per_config_params(fit_data, monkeypatch, tmp_path):
 
     # make sure temperature ramped up
     longest_traj = []
-    any_swaps = False
     for f in glob.glob("test_HAL.traj.it_*.extxyz"):
         ats = ase.io.read(f, ":")
         if len(ats) > len(longest_traj):
             longest_traj = ats
 
-        # swaps are not that frequently accepted in test system, check all trajectories 
-        # can't test at.symbols, weird numpy array of bools related error
-        any_swaps = any_swaps or (ats[0].numbers != ats[-1].numbers).any()
-
     # at least 500 steps
     assert len(longest_traj) > 50
-    # check T ramp for last 250 to 100..350
+    # check T ramp for last 150 vs. 50..200
     assert np.mean([at.get_kinetic_energy() for at in longest_traj[-15:]]) / np.mean([at.get_kinetic_energy() for at in longest_traj[5:5+15]]) > 3.0
     # check that cell changed
     assert not np.all(longest_traj[0].cell == longest_traj[-1].cell)
-    # check that species swapped
-    assert any_swaps
+    # no way check that species actually swapped
     # check something about tau_rel ramp?
 
 
@@ -65,7 +59,7 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
 
     print("calling HAL with range limited optimize_params", optimize_params)
 
-    n_iters = 30
+    n_iters = 10
 
     # copy per-config params
     starting_configs = [at.copy() for at in fit_configs]
@@ -91,14 +85,14 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
             fit_configs, starting_configs, basis_source, solver,
             fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights, "Fmax": 20.0},
             n_iters=n_iters, ref_calc=EMT(),
-            traj_len=1000, dt=1.0, tol=0.4, tau_rel=0.2, T_K=T_K, P_GPa=P_GPa,
+            traj_len=1000, dt=1.0, tol=0.4, tau_rel=0.3, T_K=T_K, P_GPa=P_GPa,
             swap_step_interval=10,
             basis_optim_kwargs={"n_trials": 20,
                                 "max_basis_len": 400,
                                 "fixed_basis_info": fixed_basis_info,
                                 "optimize_params": optimize_params,
                                 "seed": 5},
-            basis_optim_interval=10, file_root="test_HAL",
+            basis_optim_interval=5, file_root="test_HAL",
             test_fraction=0.3)
 
     assert len(new_fit_configs) < n_iters

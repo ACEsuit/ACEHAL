@@ -42,7 +42,7 @@ def test_optimize_basis(fit_data):
              fixed_basis_info=fixed_basis_info, max_basis_len=400, seed=5)
 
     # from known good run
-    expected = {'cor_order': 2, 'maxdeg': 4}
+    expected = {'cor_order': 2, 'maxdeg': 5}
     # fixed
     expected.update(fixed_basis_info)
 

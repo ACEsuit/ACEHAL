@@ -99,20 +99,33 @@ class SwapMC:
         # keeps a copy of the masses in the dynamics object, which then becomes inconsistent
         # with the Atoms copy and conversion back and forth between velocities and momenta goes
         # crazy.
+        #
+        # be sure to make copies since otherwise p1 and p2 are views into atoms.positions, and attempted
+        # swap will actually set both atoms to same position
         p1 = atoms.positions[i1].copy()
         p2 = atoms.positions[i2].copy()
+        v = atoms.get_velocities()
+        v1 = v[i1].copy()
+        v2 = v[i2].copy()
 
         atoms.positions[i1] = p2
         atoms.positions[i2] = p1
+        v[i1] = v2
+        v[i2] = v1
+        atoms.set_velocities(v)
 
         E_new = atoms.get_potential_energy() 
 
         if E_new < E_prev or np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
             print(f"Accepted MC swap step {i1} {atoms.symbols[i1]} <-> {i2} {atoms.symbols[i2]} dE {E_new - E_prev}")
         else:
-            # reject
+            # reject and undo position and velocity swaps
             atoms.positions[i1] = p1
             atoms.positions[i2] = p2
+            v = atoms.get_velocities()
+            v[i1] = v1
+            v[i2] = v2
+            atoms.set_velocities(v)
 
 class HALTolExceeded(Exception):
     pass
