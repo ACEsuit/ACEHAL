@@ -51,7 +51,7 @@ class CellMC:
         E_new = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
 
         self.accept[1] += 1
-        if np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
+        if E_new < E_prev or np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
             print(f"Accepted MC cell step from {orig_cell} to {atoms.cell} dE {E_new - E_prev}")
             self.accept[0] += 1
         else:
@@ -90,24 +90,29 @@ class SwapMC:
         i1 = np.random.randint(len(atoms))
         i_other = np.where(atoms.numbers != atoms.numbers[i1])[0]
         if len(i_other) == 0:
-            print("Performing swap step but only single element found!")
+            # should this be an error? warnings.warn?
+            print("WARNING: Performing swap step but only single element found!")
+            return
         i2 = np.random.choice(i_other)
 
-        m1, m2 = ms[i1], ms[i2]
-        el1, el2 = els[i1], els[i2]
+        # Swap positions.  Can't swap species or masses because ase.md.md.MolecularDynamics
+        # keeps a copy of the masses in the dynamics object, which then becomes inconsistent
+        # with the Atoms copy and conversion back and forth between velocities and momenta goes
+        # crazy.
+        p1 = atoms.positions[i1].copy()
+        p2 = atoms.positions[i2].copy()
 
-        atoms[i1].symbol, atoms[i1].mass = el2, m2
-        atoms[i2].symbol, atoms[i2].mass = el1, m1
+        atoms.positions[i1] = p2
+        atoms.positions[i2] = p1
 
         E_new = atoms.get_potential_energy() 
 
-        if np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
-            print(f"Accepted swap cell step dE {E_new - E_prev}")
-            atoms[i1].symbol, atoms[i1].mass = el2, m2
-            atoms[i2].symbol, atoms[i2].mass = el1, m1
+        if E_new < E_prev or np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
+            print(f"Accepted MC swap step {i1} {atoms.symbols[i1]} <-> {i2} {atoms.symbols[i2]} dE {E_new - E_prev}")
         else:
-            atoms[i1].symbol, atoms[i1].mass = el1, m1
-            atoms[i2].symbol, atoms[i2].mass = el2, m2
+            # reject
+            atoms.positions[i1] = p1
+            atoms.positions[i2] = p2
 
 class HALTolExceeded(Exception):
     pass
