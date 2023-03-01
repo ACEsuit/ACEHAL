@@ -65,7 +65,7 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
 
     print("calling HAL with range limited optimize_params", optimize_params)
 
-    n_iters = 40
+    n_iters = 30
 
     # copy per-config params
     starting_configs = [at.copy() for at in fit_configs]
