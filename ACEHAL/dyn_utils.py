@@ -83,9 +83,6 @@ class SwapMC:
         atoms = self.atoms
 
         E_prev = atoms.get_potential_energy() 
-
-        els = atoms.get_chemical_symbols()
-        ms = atoms.get_masses()
         
         i1 = np.random.randint(len(atoms))
         i_other = np.where(atoms.numbers != atoms.numbers[i1])[0]
