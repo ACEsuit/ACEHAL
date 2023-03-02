@@ -51,13 +51,78 @@ class CellMC:
         E_new = atoms.get_potential_energy() + atoms.get_volume() * self.P * ase.units.GPa
 
         self.accept[1] += 1
-        if np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
+        if E_new < E_prev or np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
             print(f"Accepted MC cell step from {orig_cell} to {atoms.cell} dE {E_new - E_prev}")
             self.accept[0] += 1
         else:
             # reject
             atoms.set_cell(orig_cell, True)
 
+class SwapMC:
+    """ASE trajectory attachment that does swap MC steps
+
+    Parameters
+    ----------
+    atoms: Atoms
+        atomic configuration
+    temperature_K: float
+        temperature in K
+    P_GPa: float
+        pressure in GPa
+    """
+    def __init__(self, atoms, temperature_K):
+        self.atoms = atoms
+
+        self.T = temperature_K
+
+        self.last_write_step = -1
+
+    def __call__(self):
+        """Do ASE dynamics trajectory attachment action"""
+
+        atoms = self.atoms
+
+        E_prev = atoms.get_potential_energy() 
+        
+        i1 = np.random.randint(len(atoms))
+        i_other = np.where(atoms.numbers != atoms.numbers[i1])[0]
+        if len(i_other) == 0:
+            # should this be an error? warnings.warn?
+            print("WARNING: Performing swap step but only single element found!")
+            return
+        i2 = np.random.choice(i_other)
+
+        # Swap positions.  Can't swap species or masses because ase.md.md.MolecularDynamics
+        # keeps a copy of the masses in the dynamics object, which then becomes inconsistent
+        # with the Atoms copy and conversion back and forth between velocities and momenta goes
+        # crazy.
+        #
+        # be sure to make copies since otherwise p1 and p2 are views into atoms.positions, and attempted
+        # swap will actually set both atoms to same position
+        p1 = atoms.positions[i1].copy()
+        p2 = atoms.positions[i2].copy()
+        v = atoms.get_velocities()
+        v1 = v[i1].copy()
+        v2 = v[i2].copy()
+
+        atoms.positions[i1] = p2
+        atoms.positions[i2] = p1
+        v[i1] = v2
+        v[i2] = v1
+        atoms.set_velocities(v)
+
+        E_new = atoms.get_potential_energy() 
+
+        if E_new < E_prev or np.random.uniform() < np.exp(-(E_new - E_prev) / (ase.units.kB * self.T)) :
+            print(f"Accepted MC swap step {i1} {atoms.symbols[i1]} <-> {i2} {atoms.symbols[i2]} dE {E_new - E_prev}")
+        else:
+            # reject and undo position and velocity swaps
+            atoms.positions[i1] = p1
+            atoms.positions[i2] = p2
+            v = atoms.get_velocities()
+            v[i1] = v1
+            v[i2] = v2
+            atoms.set_velocities(v)
 
 class HALTolExceeded(Exception):
     pass

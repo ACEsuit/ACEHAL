@@ -20,17 +20,20 @@ from sklearn.linear_model import BayesianRidge
 @pytest.fixture(scope="module")
 def fit_data():
     calc = EMT()
-    at_isolated = Atoms('Al')
-    at_isolated.calc = calc
-    E0s = {'Al': at_isolated.get_potential_energy()}
+    E0s = {}
+    for sym in ['Al', 'Cu']:
+        at_isolated = Atoms(sym)
+        at_isolated.calc = calc
+        E0s[sym] = at_isolated.get_potential_energy()
 
     rng = np.random.default_rng(5)
-    at_prim = Atoms('Al', positions=[[0, 0, 0]], cell=[[2.0, 2.0, 0.0], [2.0, 0.0, 2.0], [0.0, 2.0, 2.0]], pbc=[True])
+    at_prim = Atoms('AlAlAlCu', positions=[[0, 0, 0], [2.0, 2.0, 0.0], [2.0, 0.0, 2.0], [0.0, 2.0, 2.0]],
+                    cell=[4.0] * 3, pbc=[True])
 
     fit_configs = []
     for _ in range(10):
-        sc = at_prim * (4, 4, 4)
-        sc.rattle(rng=rng)
+        sc = at_prim * (3, 3, 3)
+        sc.rattle(0.01, rng=rng)
         F = np.eye(3) + rng.normal(scale=0.02, size=(3,3))
         sc.set_cell(sc.cell @ F, True)
         sc.calc = calc
@@ -42,8 +45,8 @@ def fit_data():
 
     test_configs = []
     for _ in range(10):
-        sc = at_prim * (4, 4, 4)
-        sc.rattle(rng=rng)
+        sc = at_prim * (3, 3, 3)
+        sc.rattle(0.01, rng=rng)
         F = np.eye(3) + rng.normal(scale=0.02, size=(3,3))
         sc.set_cell(sc.cell @ F, True)
         sc.calc = calc
@@ -71,7 +74,7 @@ def fit_data():
 def fit_model_all_info(fit_data):
     fit_configs, _, E0s, data_keys, weights = fit_data
 
-    basis_info = {'elements': ['Al'], 'cor_order': 2, 'maxdeg': 6,
+    basis_info = {'elements': list(E0s), 'cor_order': 2, 'maxdeg': 6,
                   'r_cut': 3.75, 'smoothness_prior': None}
     B_len_norm = basis.define_basis(basis_info)
 
@@ -83,7 +86,7 @@ def fit_model_all_info(fit_data):
     rng = np.random.default_rng(seed=10)
     calc, Psi, Y, coef, prop_row_inds = fit.fit(fit_configs, solver, B_len_norm, E0s,
                                      data_keys=data_keys, weights=weights,
-                                     n_committee=8, rng=rng,
+                                     n_committee=16, rng=rng,
                                      return_linear_problem=True)
 
     return calc, Psi, Y, coef, prop_row_inds, n_observations, B_len_norm

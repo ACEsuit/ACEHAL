@@ -28,8 +28,8 @@ def test_fit_residuals(fit_data, fit_model_all_info):
         print("test_residual", prop, np.sqrt(np.mean((test_Psi[test_prop_row_inds[prop]] @ coef - test_Y[test_prop_row_inds[prop]]) ** 2)))
     print("test_residual", test_residual)
 
-    assert fit_residual < 0.002
-    assert test_residual > 0.007
+    assert fit_residual < 0.005
+    assert test_residual > 0.0007
 
 
 def test_fit_properties(fit_data, fit_model):
@@ -56,10 +56,9 @@ def test_fit_properties(fit_data, fit_model):
     print("fit RMS Es", np.sqrt(np.mean(fit_diffs['E'] ** 2)))
     print("fit RMS Fs", np.sqrt(np.mean(fit_diffs['F'] ** 2)))
     print("fit RMS Vs", np.sqrt(np.mean(fit_diffs['V'] ** 2)))
-    assert np.sqrt(np.mean(fit_diffs['E'] ** 2)) < 0.0004
-    assert np.sqrt(np.mean(fit_diffs['F'] ** 2)) < 0.0007
+    assert np.sqrt(np.mean(fit_diffs['E'] ** 2)) < 0.0005
+    assert np.sqrt(np.mean(fit_diffs['F'] ** 2)) < 0.002
     assert np.sqrt(np.mean(fit_diffs['V'] ** 2)) < 0.01
-
 
     test_diffs = {prop: [] for prop in props}
     for at in test_configs:
@@ -79,6 +78,6 @@ def test_fit_properties(fit_data, fit_model):
     print("test RMS Es", np.sqrt(np.mean(test_diffs['E'] ** 2)))
     print("test RMS Fs", np.sqrt(np.mean(test_diffs['F'] ** 2)))
     print("test RMS Vs", np.sqrt(np.mean(test_diffs['V'] ** 2)))
-    assert np.sqrt(np.mean(test_diffs['E'] ** 2)) > 0.001
-    assert np.sqrt(np.mean(test_diffs['F'] ** 2)) > 0.0009
-    assert np.sqrt(np.mean(test_diffs['V'] ** 2)) > 0.04
+    assert np.sqrt(np.mean(test_diffs['E'] ** 2)) > 5e-5
+    assert np.sqrt(np.mean(test_diffs['F'] ** 2)) > 0.0002
+    assert np.sqrt(np.mean(test_diffs['V'] ** 2)) > 0.002

@@ -14,14 +14,14 @@ from ACEHAL.basis import define_basis
 from ACEHAL.bias_calc import BiasCalculator, TauRelController
 from ACEHAL.optimize_basis import optimize
 
-from ACEHAL.dyn_utils import CellMC, HALMonitor, HALTolExceeded
+from ACEHAL.dyn_utils import SwapMC, CellMC, HALMonitor, HALTolExceeded
 from ACEHAL import viz
 
 def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, ref_calc,
-        traj_len, dt, tol, tau_rel, T_K, P_GPa=None, T_tau=100.0, tol_eps=0.1, tau_hist=100,
-        cell_step_interval=10, cell_step_mag=0.01,
-        default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
-        file_root=None, traj_interval=10, test_fraction=0.0):
+         traj_len, dt, tol, tau_rel, T_K, P_GPa=None, T_tau=100.0, tol_eps=0.1, tau_hist=100,
+         cell_step_interval=10, swap_step_interval=0, cell_step_mag=0.01,
+         default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
+         file_root=None, traj_interval=10, test_fraction=0.0):
     """Iterate with hyperactive learning
 
     Parameters
@@ -66,6 +66,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
 
     cell_step_interval: int, default 25
         interval for attempts of Monte Carlo cell steps
+    swap_step_interval: int, default 0
+        interval for attempts of atom swap steps
     cell_step_mag: float, default 0.01
         magnitude of perturbations for cell MC steps
     default_basis_info: dict, default None
@@ -216,6 +218,10 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                 dyn.attach(hal_monitor)
                 if cell_mc is not None:
                     dyn.attach(cell_mc, interval=cell_step_interval)
+                
+                if swap_step_interval > 0:
+                    swap_mc = SwapMC(traj_config, T_K_cur)
+                    dyn.attach(swap_mc, interval=swap_step_interval)
 
                 # run trajectory for this section of T ramp
                 dyn.run(traj_len // len(ramp_Ts))

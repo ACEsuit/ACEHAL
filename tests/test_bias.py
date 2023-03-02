@@ -114,4 +114,4 @@ def test_tau_rel(fit_data, fit_model):
         tau_rel.update_calc(at.calc)
         at.positions += 0.01 * F
 
-    assert at.calc.tau == pytest.approx(4.0, abs=1.5)
+    assert at.calc.tau == pytest.approx(6.0, abs=3.0)

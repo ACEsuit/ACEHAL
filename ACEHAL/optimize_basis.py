@@ -59,7 +59,7 @@ def basis_dependency_range_max(basis_kwargs, fixed_basis_info, optimize_params, 
                 target_val -= 1
                 break
 
-        optimize_params_target[source_val] = target_val_range
+        optimize_params_target[source_val] = (target_val_range[0], target_val)
 
     optimize_params[dependency_target] = ("int", (dependency_source, optimize_params_target))
 

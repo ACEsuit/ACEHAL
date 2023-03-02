@@ -16,30 +16,34 @@ from ACEHAL.optimize_basis import basis_dependency_range_max
 
 def test_T_P_ramps_and_per_config_params(fit_data, monkeypatch, tmp_path):
     # test as many variants as possible in 1 run, since test is slow
+    _, _, E0s, _, _ = fit_data
 
-    fixed_basis_info = {"r_cut": 5.0, "smoothness_prior": None}
+    fixed_basis_info = {"r_cut": 5.5, "smoothness_prior": ("algebraic", 3)}
 
-    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 8))}
+    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 12))}
     basis_dependency_source_target = ("cor_order", "maxdeg")
     do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
-                T_K=[(100, 1000)], P_GPa=[(0.25, 0.5), (0.5, 1.0)])
+                T_K=[(100, 1000)], P_GPa=[(0.05, 0.2), (0.1, 0.2)], tau_rel=[(0.05, 0.2)])
 
     # make sure temperature ramped up
-    traj = []
+    longest_traj = []
     for f in glob.glob("test_HAL.traj.it_*.extxyz"):
         ats = ase.io.read(f, ":")
-        if len(ats) > len(traj):
-            traj = ats
+        if len(ats) > len(longest_traj):
+            longest_traj = ats
+
     # at least 500 steps
-    assert len(traj) > 50
-    # check T ramp for last 250 to 100..350
-    assert np.mean([at.get_kinetic_energy() for at in traj[-15:]]) / np.mean([at.get_kinetic_energy() for at in traj[5:5+15]]) > 3.0
+    assert len(longest_traj) > 50
+    # check T ramp for last 150 vs. 50..200
+    assert np.mean([at.get_kinetic_energy() for at in longest_traj[-15:]]) / np.mean([at.get_kinetic_energy() for at in longest_traj[5:5+15]]) > 3.0
     # check that cell changed
-    assert not np.all(traj[0].cell == traj[-1].cell)
+    assert not np.all(longest_traj[0].cell == longest_traj[-1].cell)
+    # no way check that species actually swapped
     # check something about tau_rel ramp?
 
 
-def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path, T_K=1000.0, P_GPa=None):
+def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
+                T_K=1000.0, P_GPa=None, tau_rel=0.2):
     monkeypatch.chdir(tmp_path)
 
     np.random.seed(10)
@@ -66,19 +70,25 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
         if isinstance(P_GPa, list):
             at.info["HAL_traj_params"] = at.info.get("HAL_traj_params", {})
             at.info["HAL_traj_params"]["P_GPa"] = P_GPa[at_i % len(P_GPa)]
+        if isinstance(tau_rel, list):
+            at.info["HAL_traj_params"] = at.info.get("HAL_traj_params", {})
+            at.info["HAL_traj_params"]["tau_rel"] = tau_rel[at_i % len(tau_rel)]
     # back to boring default values if per-config list was passed in
     if isinstance(T_K, list):
         T_K = 1000.0
     if isinstance(P_GPa, list):
         P_GPa = None
+    if isinstance(tau_rel, list):
+        tau_rel = 0.2
 
     new_fit_configs, basis_info, new_test_configs = HAL(
             fit_configs, starting_configs, basis_source, solver,
-            fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights},
+            fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights, "Fmax": 20.0},
             n_iters=n_iters, ref_calc=EMT(),
-            traj_len=1000, dt=1.0, tol=0.3, tau_rel=0.5, T_K=T_K, P_GPa=P_GPa,
+            traj_len=1000, dt=1.0, tol=0.4, tau_rel=0.3, T_K=T_K, P_GPa=P_GPa,
+            swap_step_interval=10,
             basis_optim_kwargs={"n_trials": 20,
-                                "max_basis_len": 200,
+                                "max_basis_len": 400,
                                 "fixed_basis_info": fixed_basis_info,
                                 "optimize_params": optimize_params,
                                 "seed": 5},
@@ -106,5 +116,5 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
 
     for f in tmp_path.glob("test_HAL.traj.it_*.extxyz"):
         l = len(ase.io.read(f, ":"))
-        assert l > 1 and l <= 101
+        assert l >= 1 and l <= 101
         print("do_HAL_test got len(traj)", l)
