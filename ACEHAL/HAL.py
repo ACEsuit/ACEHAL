@@ -21,7 +21,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
          traj_len, dt, tol, tau_rel, T_K, P_GPa=None, T_tau=100.0, tol_eps=0.1, tau_hist=100,
          cell_step_interval=10, swap_step_interval=0, cell_step_mag=0.01,
          default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
-         file_root=None, traj_interval=10, test_fraction=0.0):
+         file_root=None, traj_interval=10, test_configs=[], test_fraction=0.0):
     """Iterate with hyperactive learning
 
     Parameters
@@ -84,15 +84,17 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         base part of path to all saved files (trajectory, potential, new config, plots)
     traj_interval: int, default 10
         interval between trajectory snapshots
+    test_configs: list(Atoms), default []
+        configs for test set
     test_fraction: float, default 0.0
         fraction of configs to select (stochastic) for testing set
 
     Returns
     -------
-    new_configs: list(Atoms) with configurations added by HAL
+    new_fit_configs: list(Atoms) with configurations added by HAL
     basis_info: dict with info for constructing last basis used
     if test_fraction > 0.0:
-        test_configs: list(Atoms) with test set configurations
+        new_test_configs: list(Atoms) with new test set configurations
     """
 
     default_traj_params = {"traj_len": traj_len,
@@ -135,6 +137,11 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
     t0 = time.time()
     committee_calc = _fit(fit_configs, solver, fit_kwargs, B_len_norm, file_root, _HAL_label(0))
     print("TIMING initial_fit", time.time() - t0)
+    error_configs = [("fit", fit_configs)]
+    if len(test_configs) > 0 or test_fraction > 0:
+        error_configs.append(("test", test_configs))
+    print("INITIAL FIT ERROR TABLE")
+    print(viz.error_table(error_configs, committee_calc, fit_kwargs["data_keys"]))
     sys.stdout.flush()
 
     # prepare lists for new configs
@@ -197,6 +204,11 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         # run dynamics for entire T ramp
         try:
             for tau_rel_cur, T_K_cur, P_GPa_cur in zip(ramp_tau_rels, ramp_Ts, ramp_Ps):
+                traj_config.info["HAL_tau_rel"] = tau_rel_cur
+                traj_config.info["HAL_T_K"] = T_K_cur
+                if P_GPa_cur is not None:
+                    traj_config.info["HAL_P_GPa"] = P_GPa_cur
+
                 if P_GPa_cur is not None:
                     # attachment to do cell steps
                     # E = N B strain^2
@@ -255,7 +267,9 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         trigger_data = {"criterion": (hal_monitor.HAL_trigger_step, np.abs(tol))}
         viz.plot_HAL_traj_data(hal_monitor.run_data, trigger_data, plot_traj_file)
 
-        print(f"HAL iter {iter_HAL} got config with criterion {new_config.info['HAL_criterion']} at time step {hal_monitor.HAL_trigger_step} / {traj_len}")
+        print(f"HAL iter {iter_HAL} got config with " +
+              " , ".join([f"{k} : {v}" for k, v in new_config.info.items() if k.startswith('HAL_') and k != "HAL_traj_params"]) +
+              f" traj_len {traj_len}")
         sys.stdout.flush()
 
         if ref_calc is not None:
@@ -309,6 +323,11 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             # re-fit (whether because of new config or new basis or both)
             # label potential with next iteration, since that's when it will be used
             committee_calc = _fit(fit_configs + new_fit_configs, solver, fit_kwargs, B_len_norm, file_root, _HAL_label(iter_HAL + 1))
+            error_configs = [("fit", fit_configs + new_fit_configs)]
+            if len(test_configs + new_test_configs) > 0 or test_fraction > 0:
+                error_configs.append(("test", test_configs + new_test_configs))
+            print("FIT ERROR TABLE")
+            print(viz.error_table(error_configs, committee_calc, fit_kwargs["data_keys"]))
             print("TIMING fit", time.time() - t0)
 
     # return fit configs, final basis_info, and optionally test configs

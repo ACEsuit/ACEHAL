@@ -23,13 +23,27 @@ def error_table(config_sets, calc, data_keys):
     err_data = {"E/at": [], "F": [], "V/at": []}
     index = []
 
+    if isinstance(config_sets[0], Atoms):
+        config_sets = [config_sets]
+
     for label_atoms in config_sets:
-        try:
-            label, atoms_list = label_atoms
-        except TypeError:
+        if isinstance(label_atoms[0], Atoms):
+            # bare Atoms
             label = None
             atoms_list = label_atoms
+        elif len(label_atoms[1]) == 0 or isinstance(label_atoms[1][0], Atoms):
+            # list of Atoms
+            label, atoms_list = label_atoms
+        else:
+            raise ValueError("Got config_set containing something other than list(Atoms) or (str, list(Atoms))")
+
         index.append(label)
+
+        if len(atoms_list) == 0:
+            err_data["E/at"].append(np.nan)
+            err_data["F"].append(np.nan)
+            err_data["V/at"].append(np.nan)
+            continue
 
         E_err = []
         F_err = []
