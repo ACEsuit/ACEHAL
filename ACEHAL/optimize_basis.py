@@ -94,7 +94,7 @@ class StopWhenTrialKeepFailingCallback:
         if self._consecutive_failed_count >= self.threshold:
             study.stop()
 
-def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kwargs, fixed_basis_info=None, max_basis_len=None,
+def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kwargs, prior=None, fixed_basis_info=None, max_basis_len=None,
              score="BIC", timeout=600, addl_guesses=[], seed=None):
     """optimize the basis by maximizing a score over a number of optuna trials
 
@@ -204,6 +204,9 @@ def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kw
         return trial_score
 
     study = optuna.create_study(sampler=TPESampler(seed=seed), direction='minimize')
+
+    if prior is not None:
+        study.enqueue_trial(prior)
 
     for guess in addl_guesses:
         guess_dict = guess.copy()

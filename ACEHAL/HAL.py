@@ -20,7 +20,7 @@ from ACEHAL import viz
 def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, ref_calc,
          traj_len, dt, tol, tau_rel, T_K, P_GPa=None, T_tau=100.0, tol_eps=0.1, tau_hist=100,
          cell_step_interval=10, swap_step_interval=0, cell_step_mag=0.01,
-         default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
+         default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None, softmax=False,
          file_root=None, traj_interval=10, test_configs=[], test_fraction=0.0):
     """Iterate with hyperactive learning
 
@@ -181,7 +181,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             traj_filename = file_root.parent / (file_root.name + f".traj.{HAL_label}.extxyz")
         else:
             traj_filename = None
-        hal_monitor = HALMonitor(traj_config, tol, tol_eps, tau_rel_control, traj_file=traj_filename, traj_interval=traj_interval)
+        hal_monitor = HALMonitor(traj_config, tol, tol_eps, tau_rel_control, traj_file=traj_filename, traj_interval=traj_interval, softmax=softmax)
 
         def _make_ramps(*args, n_stages=20):
             if not any([isinstance(arg, (tuple, list)) for arg in args]):
@@ -311,7 +311,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             t0 = time.time()
             # optimize basis
             basis_info = _optimize_basis(fit_configs + new_fit_configs, basis_source, solver, fit_kwargs,
-                                         basis_optim_kwargs)
+                                         basis_optim_kwargs, prior=basis_info)
             print("HAL got optimized basis", basis_info)
             B_len_norm = define_basis(basis_info, basis_source)
             # reset calculator to trigger a it with the new basis based on the optimized basis_info
@@ -337,7 +337,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         return new_fit_configs, basis_info
 
 
-def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_kwargs):
+def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_kwargs, prior=None):
     """Optimize a basis
 
     Parameters
@@ -360,7 +360,7 @@ def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_k
     # do the optimization
     basis_info = optimize(solver=solver, fitting_db=fit_configs,
             basis_kwargs={"julia_source": basis_source},
-            fit_kwargs=fit_kwargs, **basis_optim_kwargs)
+            fit_kwargs=fit_kwargs, prior=prior, **basis_optim_kwargs)
 
     return basis_info
 

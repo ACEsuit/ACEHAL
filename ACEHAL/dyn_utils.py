@@ -3,6 +3,10 @@ import numpy as np
 import ase.units
 import ase.io
 
+def f_softmax(x):
+    """Compute softmax values"""
+    e_x = np.exp(x)
+    return e_x / e_x.sum()
 
 class CellMC:
     """ASE trajectory attachment that does cell MC steps
@@ -149,13 +153,14 @@ class HALMonitor:
     err_forces_RMS: bool, default True
         use the RMS force error rather than MAE error
     """
-    def __init__(self, atoms, tol, tol_eps, tau_rel_control=None, traj_file=None, traj_interval=10, err_forces_RMS=True):
+    def __init__(self, atoms, tol, tol_eps, tau_rel_control=None, traj_file=None, traj_interval=10, err_forces_RMS=True, softmax=False):
         self.atoms = atoms
         self.tol = tol
         self.tol_eps = tol_eps
         self.tau_rel_control = tau_rel_control
         self.traj_interval = traj_interval
         self.err_forces_RMS = err_forces_RMS
+        self.softmax = softmax
 
         if traj_file is not None:
             self.traj_file = open(traj_file, "w")
@@ -212,7 +217,11 @@ class HALMonitor:
         # check HAL tolerance
         forces_err = atoms.calc.results_extra["err_forces"] if self.err_forces_RMS else atoms.calc.results_extra["err_forces_MAE"]
         # NOTE: add support for softmax
-        criterion = np.max(forces_err / (np.linalg.norm(atoms.calc.results_extra["unbiased_forces"], axis=1) + self.tol_eps))
+        rel_uncertainty = forces_err / (np.linalg.norm(atoms.calc.results_extra["unbiased_forces"], axis=1) + self.tol_eps)
+        if self.softmax == False:
+            criterion = np.max(rel_uncertainty)
+        else:
+            criterion = np.max(f_softmax(rel_uncertainty))
         self.run_data["criterion"].append(criterion)
 
         atoms.info["HAL_step"] = self.step
