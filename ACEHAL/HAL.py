@@ -146,8 +146,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
 
     # prepare lists for new configs
     new_fit_configs = []
-    if test_fraction > 0.0:
-        new_test_configs = []
+    new_test_configs = []
 
     for iter_HAL in range(n_iters):
         HAL_label = _HAL_label(iter_HAL)
