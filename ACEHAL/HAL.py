@@ -221,7 +221,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                     cell_mc = None
 
                 # set up tau controller for this section of ramp
-                tau_rel_control.sefriction_rel(tau_rel_cur)
+                tau_rel_control.set_tau_rel(tau_rel_cur)
 
                 # set up dynamics for this section of ramp
                 dyn = Langevin(traj_config, dt_fs * ase.units.fs, temperature_K=T_K_cur, friction=friction)
