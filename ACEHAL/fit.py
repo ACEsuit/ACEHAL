@@ -256,7 +256,7 @@ def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None):
     return np.asarray(Psi), np.asarray(Y), prop_row_inds
 
 
-def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_file=None, rng=None, verbose=False):
+def do_fit(Psi, Y, B, E0s, solver, n_committee=32, basis_normalization=None, pot_file=None, rng=None, verbose=False):
     """fit an ACE committee model to a design matrix and RHS
 
     Parameters
