@@ -96,7 +96,7 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
             fit_configs, starting_configs, basis_source, solver,
             fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights, "Fmax": 20.0},
             n_iters=n_iters, ref_calc=EMT(),
-            traj_len=1000, dt=1.0, tol=0.4, tau_rel=0.3, T_K=T_K, P_GPa=P_GPa,
+            traj_len=1000, dt_fs=1.0, tol=0.4, tau_rel=0.3, T_K=T_K, P_GPa=P_GPa,
             swap_step_interval=10,
             basis_optim_kwargs={"n_trials": 20,
                                 "max_basis_len": 400,
