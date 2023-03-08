@@ -224,7 +224,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                 tau_rel_control.set_tau_rel(tau_rel_cur)
 
                 # set up dynamics for this section of ramp
-                dyn = Langevin(traj_config, dt * ase.units.kB, temperature_K=T_K_cur, friction=T_tau)
+                dyn = Langevin(traj_config, dt * ase.units.fs, temperature_K=T_K_cur, friction=T_tau)
 
                 # attach monitor and cell steps
                 dyn.attach(hal_monitor)
