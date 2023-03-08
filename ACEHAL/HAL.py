@@ -8,7 +8,7 @@ import numpy as np
 
 import ase.io
 from ase.md.langevin import Langevin
-import ase
+from ase import units
 
 from ACEHAL.fit import fit
 from ACEHAL.basis import define_basis
@@ -147,8 +147,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
 
     # prepare lists for new configs
     new_fit_configs = []
-    if test_fraction > 0.0:
-        new_test_configs = []
+    new_test_configs = []
 
     for iter_HAL in range(n_iters):
         HAL_label = _HAL_label(iter_HAL)
@@ -225,7 +224,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                 tau_rel_control.set_tau_rel(tau_rel_cur)
 
                 # set up dynamics for this section of ramp
-                dyn = Langevin(traj_config, dt * ase.units.fs, temperature_K=T_K_cur, friction=1.0 / T_tau)
+                dyn = Langevin(traj_config, dt * ase.units.kB, temperature_K=T_K_cur, friction=T_tau)
 
                 # attach monitor and cell steps
                 dyn.attach(hal_monitor)
@@ -283,14 +282,18 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                 try:
                     E = new_config.get_potential_energy(force_consistent=True)
                 except:
+                    print("No force_consistent=True energy found!")
                     E = new_config.get_potential_energy()
                 new_config.info[data_keys['E']] = E
             if 'F' in data_keys:
                 F = new_config.get_forces()
                 new_config.new_array(data_keys['F'], F)
             if 'V' in data_keys:
-                V = - new_config.get_volume() * new_config.get_stress(voigt=False)
-                new_config.info[data_keys['V']] = V
+                try:
+                    V = - new_config.get_volume() * new_config.get_stress(voigt=False)
+                    new_config.info[data_keys['V']] = V
+                except:
+                    print("No virial (or stress) found!")
             print("TIMING reference_calc", time.time() - t0)
 
         # save new config to fit or test set
