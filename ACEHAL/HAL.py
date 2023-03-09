@@ -21,7 +21,7 @@ from ACEHAL.dyn_utils import SwapMC, CellMC, HALMonitor, HALTolExceeded
 from ACEHAL import viz
 
 def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, ref_calc,
-         traj_len, dt_fs, tol, tau_rel, T_K, P_GPa=None, T_timescale_fs=0.01, tol_eps=0.1, tau_hist=100,
+         traj_len, dt_fs, tol, tau_rel, T_K, P_GPa=None, T_timescale_fs=100, tol_eps=0.1, tau_hist=100,
          cell_step_interval=10, swap_step_interval=0, cell_step_mag=0.01,
          default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
          file_root=None, traj_interval=10, test_configs=[], test_fraction=0.0):
