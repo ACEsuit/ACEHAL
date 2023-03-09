@@ -50,7 +50,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
     traj_len: int
         max len of trajectories (unless tau_rel exceeded) (overridable in Atoms.info)
     dt_fs: float
-        time step for dynamics (overridable in Atoms.info)
+        time step (in fs) for dynamics (overridable in Atoms.info)
     tol: float
         tolerance for triggering HAL in fractional force error. If negative, save first config that 
         exceeds tol but continue trajectory to full traj_len (overridable in Atoms.info)
@@ -61,7 +61,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
     P_GPa: float / tuple(float, float), default None
         pressure (in GPa) for dynamics, fixed or range for ramp, None for fixed cell (overridable in Atoms.info)
     T_timescale_fs: float, default 100.0
-        time scale for Langevin dynamics (overridable in Atoms.info)
+        time scale (in fs) for Langevin dynamics (overridable in Atoms.info)
     tol_eps: float, default 0.1
         regularization epsilon to add to force denominator when computing relative force error for HAL tolerance (overridable in Atoms.info)
     tau_hist: int, default 100
