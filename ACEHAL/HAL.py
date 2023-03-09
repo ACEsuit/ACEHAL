@@ -1,5 +1,6 @@
 import sys
 import time
+import warnings
 
 from pprint import pformat
 from pathlib import Path
@@ -9,6 +10,7 @@ import numpy as np
 import ase.io
 from ase.md.langevin import Langevin
 from ase import units
+from ase.calculators.calculator import PropertyNotImplementedError
 
 from ACEHAL.fit import fit
 from ACEHAL.basis import define_basis
@@ -281,8 +283,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             if 'E' in data_keys:
                 try:
                     E = new_config.get_potential_energy(force_consistent=True)
-                except:
-                    print("No force_consistent=True energy found!")
+                except PropertyNotImplementedError:
+                    warnings.warn(f"No force_consistent=True energy found for new config with reference calculator {ref_calc}")
                     E = new_config.get_potential_energy()
                 new_config.info[data_keys['E']] = E
             if 'F' in data_keys:
@@ -292,8 +294,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                 try:
                     V = - new_config.get_volume() * new_config.get_stress(voigt=False)
                     new_config.info[data_keys['V']] = V
-                except:
-                    print("No virial (or stress) found!")
+                except PropertyNotImplementedError:
+                    warnings.warn(f"No stress for new config with reference calculator {ref_calc}")
             print("TIMING reference_calc", time.time() - t0)
 
         # save new config to fit or test set
