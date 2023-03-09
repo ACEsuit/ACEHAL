@@ -1,5 +1,6 @@
 import sys
 import time
+import warnings
 
 from pprint import pformat
 from pathlib import Path
@@ -9,6 +10,7 @@ import numpy as np
 import ase.io
 from ase.md.langevin import Langevin
 from ase import units
+from ase.calculators.calculator import PropertyNotImplementedError
 
 from ACEHAL.fit import fit
 from ACEHAL.basis import define_basis
@@ -19,7 +21,7 @@ from ACEHAL.dyn_utils import SwapMC, CellMC, HALMonitor, HALTolExceeded
 from ACEHAL import viz
 
 def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, ref_calc,
-         traj_len, dt, tol, tau_rel, T_K, P_GPa=None, T_tau=100.0, tol_eps=0.1, tau_hist=100,
+         traj_len, dt_fs, tol, tau_rel, T_K, P_GPa=None, T_timescale_fs=100, tol_eps=0.1, tau_hist=100,
          cell_step_interval=10, swap_step_interval=0, cell_step_mag=0.01,
          default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
          file_root=None, traj_interval=10, test_configs=[], test_fraction=0.0):
@@ -47,8 +49,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
 
     traj_len: int
         max len of trajectories (unless tau_rel exceeded) (overridable in Atoms.info)
-    dt: float
-        time step for dynamics (overridable in Atoms.info)
+    dt_fs: float
+        time step (in fs) for dynamics (overridable in Atoms.info)
     tol: float
         tolerance for triggering HAL in fractional force error. If negative, save first config that 
         exceeds tol but continue trajectory to full traj_len (overridable in Atoms.info)
@@ -58,8 +60,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         temperature (in K) for Langevin dynamics, fixed or range for ramp (overridable in Atoms.info)
     P_GPa: float / tuple(float, float), default None
         pressure (in GPa) for dynamics, fixed or range for ramp, None for fixed cell (overridable in Atoms.info)
-    T_tau: float, default 100.0
-        time scale for Langevin dynamics friction (overridable in Atoms.info)
+    T_timescale_fs: float, default 100.0
+        time scale (in fs) for Langevin dynamics (overridable in Atoms.info)
     tol_eps: float, default 0.1
         regularization epsilon to add to force denominator when computing relative force error for HAL tolerance (overridable in Atoms.info)
     tau_hist: int, default 100
@@ -99,12 +101,12 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
     """
 
     default_traj_params = {"traj_len": traj_len,
-                           "dt": dt,
+                           "dt_fs": dt_fs,
                            "tol": tol,
                            "tau_rel": tau_rel,
                            "T_K": T_K,
                            "P_GPa": P_GPa,
-                           "T_tau": T_tau,
+                           "T_timescale_fs": T_timescale_fs,
                            "tol_eps": tol_eps,
                            "tau_hist": tau_hist}
 
@@ -159,12 +161,12 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         traj_params = default_traj_params.copy()
         traj_params.update(traj_config.info.get("HAL_traj_params", {}))
         traj_len = traj_params["traj_len"]
-        dt = traj_params["dt"]
+        dt_fs = traj_params["dt_fs"]
         tol = traj_params["tol"]
         tau_rel = traj_params["tau_rel"]
         T_K = traj_params["T_K"]
         P_GPa = traj_params["P_GPa"]
-        T_tau = traj_params["T_tau"]
+        T_timescale_fs = traj_params["T_timescale_fs"]
         tol_eps = traj_params["tol_eps"]
         tau_hist = traj_params["tau_hist"]
 
@@ -224,7 +226,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                 tau_rel_control.set_tau_rel(tau_rel_cur)
 
                 # set up dynamics for this section of ramp
-                dyn = Langevin(traj_config, dt * ase.units.fs, temperature_K=T_K_cur, friction=T_tau)
+                dyn = Langevin(traj_config, dt_fs * ase.units.fs, temperature_K=T_K_cur, friction=(1/(T_timescale_fs * ase.units.fs)))
 
                 # attach monitor and cell steps
                 dyn.attach(hal_monitor)
@@ -281,8 +283,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             if 'E' in data_keys:
                 try:
                     E = new_config.get_potential_energy(force_consistent=True)
-                except:
-                    print("No force_consistent=True energy found!")
+                except PropertyNotImplementedError:
+                    warnings.warn(f"No force_consistent=True energy found for new config with reference calculator {ref_calc}")
                     E = new_config.get_potential_energy()
                 new_config.info[data_keys['E']] = E
             if 'F' in data_keys:
@@ -292,8 +294,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                 try:
                     V = - new_config.get_volume() * new_config.get_stress(voigt=False)
                     new_config.info[data_keys['V']] = V
-                except:
-                    print("No virial (or stress) found!")
+                except PropertyNotImplementedError:
+                    warnings.warn(f"No stress for new config with reference calculator {ref_calc}")
             print("TIMING reference_calc", time.time() - t0)
 
         # save new config to fit or test set
