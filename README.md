@@ -17,7 +17,7 @@ This package builds ACE interatomic potentials using Hyperactive Learning (HAL) 
 
 ```python -c "import julia; julia.install()"```
 
-4. Install this package by ```pip install . ``` or ```python setup.py install`` after cloning this repo
+4. Install this package by ```pip install . ``` or ```python setup.py install``` after cloning this repo
 
 ### References:
 
