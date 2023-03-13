@@ -1,6 +1,3 @@
-# ACEHAL
-
-
 ## ACEHAL: Hyperactive Learning (HAL) Python interface for building Atomic Cluster Expansion potentials (ACE1.jl/ACE1x.jl) 
 
 This package builds ACE interatomic potentials using Hyperactive Learning (HAL) using the ACE.jl/ACE1x.jl Julia software packages.
