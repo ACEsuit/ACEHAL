@@ -2,22 +2,36 @@
 
 This package builds ACE interatomic potentials using Hyperactive Learning (HAL).
 
-### Installation instructions:
+### HAL installation:
 
-1. install julia 1.8.5 and python 3.9.x (with python ase, scikit-learn, matplotlib and numpy installed)
-2. run julia command (add ```Pkg.activate(".")``` to use local project and set environment variable ```JULIA_PROJECT``` accordingly) 
+1. install Julia 1.8.5 and python 3.9.x (with python ase, scikit-learn, matplotlib and numpy installed)
+2. run Julia command (add ```Pkg.activate(".")``` to use local project and set environment variable ```JULIA_PROJECT``` accordingly) 
 
 ```using Pkg; pkg"registry add https://github.com/JuliaRegistries/General"; pkg"registry add https://github.com/ACEsuit/ACEregistry"; pkg"add ACE1, ACE1x, ASE, JuLIP"```
 
    make sure you have at least ACE1 version = 0.11.4 and ACE1x = 0.0.4. 
    
-3. install `julia` python package to set up Python -> Julia connection 
+3. install `julia` Python package to set up Python -> Julia connection 
 
 ```python -m pip install julia==0.6.1```
 
 ```python -c "import julia; julia.install()"```
 
 4. Install this package by ```pip install . ``` or ```python setup.py install``` after cloning this repo
+
+### ACE1 potentials in Python:
+
+After installation of `julia` Python package (see 3. above) ACE1x potentials (.json) can be used by first installing `pyjulip`.
+
+```
+git clone https://github.com/casv2/pyjulip.git
+cd pyjulip
+pip install .
+```
+
+Python ASE calculators are set up using `pyjulip.ACE1("filename.json")`
+
+### Tutorials
 
 ### References:
 
