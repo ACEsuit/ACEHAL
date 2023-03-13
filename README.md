@@ -31,7 +31,9 @@ pip install .
 
 Python ASE calculators are set up using `pyjulip.ACE1("filename.json")`
 
-### Tutorials
+### Example scripts
+
+Example scripts can be found in the scripts folder. 
 
 ### References:
 
