@@ -1,6 +1,6 @@
 ## ACEHAL: Hyperactive Learning (HAL) Python interface for building Atomic Cluster Expansion potentials (ACE1.jl/ACE1x.jl) 
 
-This package builds ACE interatomic potentials using Hyperactive Learning (HAL).
+This package builds ACE interatomic potentials using Hyperactive Learning (HAL). Written by Cas van der Oord and Noam Bernstein. 
 
 ### HAL installation:
 
