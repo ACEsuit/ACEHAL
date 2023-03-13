@@ -5,7 +5,7 @@ This package builds ACE interatomic potentials using Hyperactive Learning (HAL).
 ### Installation instructions:
 
 1. install julia 1.8.5 and python 3.9.x (with python ase, scikit-learn, matplotlib and numpy installed)
-2. run julia command (add ```Pkg.activate(".")``` for local project) 
+2. run julia command (add ```Pkg.activate(".")``` to use local project and set environment variable ```JULIA_PROJECT``` accordingly) 
 
 ```using Pkg; pkg"registry add https://github.com/JuliaRegistries/General"; pkg"registry add https://github.com/ACEsuit/ACEregistry"; pkg"add ACE1, ACE1x, ASE, JuLIP"```
 
