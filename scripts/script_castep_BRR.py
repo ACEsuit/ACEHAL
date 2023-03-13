@@ -51,7 +51,7 @@ HAL(fit_configs, # initial fitting database
     P_GPa=1.0, # Pressure (in GPa)
     swap_step_interval=50, # atom swap MC step interval 
     cell_step_interval=50, # cell shape MC step interval
-    basis_optim_kwargs={"n_trials": 5, # max number of basis optimisation iterations
+    basis_optim_kwargs={"n_trials": 10, # max number of basis optimisation iterations
                         "timeout" : 10000, # timeout for a basis optimisation iteration
                         "max_basis_len": 3000, # max basis size 
                         "fixed_basis_info": fixed_basis_info, # fixed basis information (see above)
