@@ -21,7 +21,7 @@ from ACEHAL.dyn_utils import SwapMC, CellMC, HALMonitor, HALTolExceeded
 from ACEHAL import viz
 
 def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, ref_calc,
-         traj_len, dt_fs, tol, tau_rel, T_K, P_GPa=None, T_timescale_fs=100, tol_eps=0.1, tau_hist=100,
+         traj_len, dt_fs, tol, tau_rel, T_K, P_GPa=None, cell_fixed_shape=False, T_timescale_fs=100, tol_eps=0.1, tau_hist=100,
          cell_step_interval=10, swap_step_interval=0, cell_step_mag=0.01,
          default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
          file_root=None, traj_interval=10, test_configs=[], test_fraction=0.0):
@@ -60,6 +60,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         temperature (in K) for Langevin dynamics, fixed or range for ramp (overridable in Atoms.info)
     P_GPa: float / tuple(float, float), default None
         pressure (in GPa) for dynamics, fixed or range for ramp, None for fixed cell (overridable in Atoms.info)
+    cell_fixed_shape: bool, default False
+        variable cell only vary volume, not shape
     T_timescale_fs: float, default 100.0
         time scale (in fs) for Langevin dynamics (overridable in Atoms.info)
     tol_eps: float, default 0.1
@@ -106,6 +108,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                            "tau_rel": tau_rel,
                            "T_K": T_K,
                            "P_GPa": P_GPa,
+                           "cell_fixed_shape": cell_fixed_shape,
                            "T_timescale_fs": T_timescale_fs,
                            "tol_eps": tol_eps,
                            "tau_hist": tau_hist}
@@ -160,12 +163,14 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         # set parameters for this run based on defaults, optionally overriden by traj_config.info["HAL_traj_params"]
         traj_params = default_traj_params.copy()
         traj_params.update(traj_config.info.get("HAL_traj_params", {}))
+        print("HAL iter", iter_HAL, "using params", traj_params)
         traj_len = traj_params["traj_len"]
         dt_fs = traj_params["dt_fs"]
         tol = traj_params["tol"]
         tau_rel = traj_params["tau_rel"]
         T_K = traj_params["T_K"]
         P_GPa = traj_params["P_GPa"]
+        cell_fixed_shape = traj_params["cell_fixed_shape"]
         T_timescale_fs = traj_params["T_timescale_fs"]
         tol_eps = traj_params["tol_eps"]
         tau_hist = traj_params["tau_hist"]
@@ -218,7 +223,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
                     # aim for cell_step_mag for 500 K and 40 atoms
                     # NOTE: need to make sure this actually scales sensibly in practice.  Maybe collect acceptance statistics?
                     cell_step_mag_use = cell_step_mag * np.sqrt((T_K_cur / 500.0) / (len(traj_config) / 40))
-                    cell_mc = CellMC(traj_config, T_K_cur, P_GPa_cur, cell_step_mag_use)
+                    cell_mc = CellMC(traj_config, T_K_cur, P_GPa_cur, mag=cell_step_mag_use, fixed_shape=cell_fixed_shape)
                 else:
                     cell_mc = None
 
