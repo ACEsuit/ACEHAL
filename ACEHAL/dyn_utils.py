@@ -19,13 +19,16 @@ class CellMC:
         pressure in GPa
     mag: float
         magnitude of cell step perturbations
+    fixed_shape: bool, default False
+        fix cell shape and only propose volume changes
     """
-    def __init__(self, atoms, temperature_K, P_GPa, mag):
+    def __init__(self, atoms, temperature_K, P_GPa, mag, fixed_shape=False):
         self.atoms = atoms
 
         self.T = temperature_K
         self.P = P_GPa
         self.P_mag = mag
+        self.fixed_shape = fixed_shape
 
         self.last_write_step = -1
         self.accept = [0, 0]
@@ -33,14 +36,19 @@ class CellMC:
     def __call__(self):
         """Do ASE dynamics trajectory attachment action"""
 
-        dF_diag = np.diag(self.P_mag * np.random.normal(size=3))
-        # to get comparable magnitude would actually be multiplied by 0.5 here 
-        # (since i,j and j,i are both applied), but shear constants are softer than 
-        # stretch, going to try bigger steps for off-diagonal
-        dF_off_diag = self.P_mag * np.random.normal(size=3)
-        dF_off_diag = np.asarray([[0.0, dF_off_diag[0], dF_off_diag[1]],
-                                  [dF_off_diag[0], 0.0, dF_off_diag[2]],
-                                  [dF_off_diag[1], dF_off_diag[2], 0.0]])
+        if self.fixed_shape:
+            dF_diag = self.P_mag * np.random.normal() * np.diag([1] * 3)
+            dF_off_diag = np.zeros((3, 3))
+        else:
+            dF_diag = np.diag(self.P_mag * np.random.normal(size=3))
+            # to get comparable magnitude would actually be multiplied by 0.5 here
+            # (since i,j and j,i are both applied), but shear constants are softer than
+            # stretch, going to try bigger steps for off-diagonal
+            dF_off_diag = self.P_mag * np.random.normal(size=3)
+            dF_off_diag = np.asarray([[0.0, dF_off_diag[0], dF_off_diag[1]],
+                                      [dF_off_diag[0], 0.0, dF_off_diag[2]],
+                                      [dF_off_diag[1], dF_off_diag[2], 0.0]])
+
         F = np.eye((3)) + dF_diag + dF_off_diag
 
         atoms = self.atoms
