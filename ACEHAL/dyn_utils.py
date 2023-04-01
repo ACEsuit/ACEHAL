@@ -209,9 +209,9 @@ class HALMonitor:
 
         atoms = self.atoms
 
-        self.run_data["PE"].append(atoms.get_potential_energy() / len(atoms))
-        self.run_data["T"].append(atoms.get_kinetic_energy() / len(atoms) / (1.5 * ase.units.kB))
-        self.run_data["P"].append(-(np.trace(atoms.get_stress(voigt=False))/3) / ase.units.GPa )
+        self.run_data["PE [eV/atom]"].append(atoms.get_potential_energy() / len(atoms))
+        self.run_data["T [K]"].append(atoms.get_kinetic_energy() / len(atoms) / (1.5 * ase.units.kB))
+        self.run_data["P [GPa]"].append(-(np.trace(atoms.get_stress(voigt=False))/3) / ase.units.GPa )
 
         # # trigger forces so that results_extra["err_forces"] is present, caching should
         # # ensure that forces used for MD do not require an additional calculation
