@@ -172,7 +172,7 @@ class HALMonitor:
             self.traj_file = None
 
         self.step = 0
-        self.run_data = { 'PE': [], 'KE': [], 'P': [], 'criterion': [] }
+        self.run_data = { 'PE [eV/atom]': [], 'T [K]': [], 'P [GPa]': [], 'criterion': [] }
         self.HAL_trigger_config = None
         self.HAL_trigger_step = None
 
@@ -209,9 +209,9 @@ class HALMonitor:
 
         atoms = self.atoms
 
-        self.run_data["PE"].append(atoms.get_potential_energy() / len(atoms))
-        self.run_data["KE"].append(atoms.get_kinetic_energy() / len(atoms))
-        self.run_data["P"].append(-np.mean(atoms.get_stress()[0:3]))
+        self.run_data["PE [eV/atom]"].append(atoms.get_potential_energy() / len(atoms))
+        self.run_data["T [K]"].append(atoms.get_kinetic_energy() / len(atoms) / (1.5 * ase.units.kB))
+        self.run_data["P [GPa]"].append(-(np.trace(atoms.get_stress(voigt=False))/3) / ase.units.GPa )
 
         # # trigger forces so that results_extra["err_forces"] is present, caching should
         # # ensure that forces used for MD do not require an additional calculation
