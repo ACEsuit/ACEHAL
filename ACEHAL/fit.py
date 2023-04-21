@@ -30,7 +30,7 @@ def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=None, n_co
         solvers for the linear problem
     B_len_norm: (julia basis object, int, array(float) / None)
         3-tuple representing basis to use, as returned by ACEHAL.basis.define_basis,
-        consisting of basis object, integer length (ignored), and optional array with 
+        consisting of basis object, integer length (ignored), and optional array with
         normalization factors.
     E0s: dict{str: float}
         dict of atomic energies for each species
@@ -60,7 +60,7 @@ def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=None, n_co
     -------
     ACECommittee fit calculator with optional committee
     iff return_linear_problem is True:
-        Psi, Y, coef: numpy array(float) design matrix, RHS and coefficients 
+        Psi, Y, coef: numpy array(float) design matrix, RHS and coefficients
         prop_row_inds: dict('E' / 'F' / 'V': list(int)) with indices of Psi and Y rows corresponding to each type of property
     """
     Psi, Y, prop_row_inds = assemble_Psi_Y(atoms_list, B_len_norm[0], E0s, data_keys, weights, Fmax=Fmax)
@@ -82,8 +82,8 @@ def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=None, n_co
 
     if data_save_label is not None:
         args = {'file': data_save_label + ".Psi.npz",
-                'Psi': Psi, 
-                'Y': Y, 
+                'Psi': Psi,
+                'Y': Y,
                 'c': coef}
         try:
             args['sigma'] = solver.sigma_
@@ -213,7 +213,7 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
     return Psi, Y, prop_row_inds
 
 
-def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None):
+def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None, verbose=False):
     """Assemble the entire design matrix, right hand side, and indices of E, F, V related rows
 
     Parameters
@@ -245,7 +245,9 @@ def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None):
     Y = []
     prop_row_inds = {'E': [], 'F': [], 'V': []}
     last_Y_len = 0
-    for at in ats:
+    for j, at in enumerate(ats):
+        if verbose:
+            print("\r", j, "\"", len(ats), end="")
         Psi_sec, Y_sec, prop_row_inds_sec = _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=Fmax)
         Psi.extend(Psi_sec)
         Y.extend(Y_sec)
@@ -256,7 +258,7 @@ def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None):
     return np.asarray(Psi), np.asarray(Y), prop_row_inds
 
 
-def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_file=None, rng=None, verbose=False):
+def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_file=None, rng=None, verbose=False, refit=True):
     """fit an ACE committee model to a design matrix and RHS
 
     Parameters
@@ -280,7 +282,7 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
 
     Returns
     -------
-    model ACECommittee 
+    model ACECommittee
     c coefficients vector
     """
     if verbose:
@@ -293,7 +295,28 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
     else:
         Psi_norm = Psi
 
-    solver.fit(Psi_norm, Y)
+    if refit:
+        solver.fit(Psi_norm, Y)
+
+
+    #optimise the threshold here + code it in this way so that you don't include the BRM code in the HAL fork
+    #if isinstance(solver, BayesianRegressionMax):
+    if str(type(solver)) == "<class 'bayes_regress_max.BayesianRegressionMax'>" and solver.method == "ARD":
+        print("setting ARD threshold using the BIC score")
+        n, K = Psi.shape
+        history = []
+        for threshold in np.logspace(-3, 4, 70):
+            solver.reset_threshold(threshold)
+            coef_t = np.array(solver.coef_)
+            residuals_t = Psi@coef_t-Y
+            K = np.sum(abs(coef_t) > 1e-15)
+            BIC = n * np.log(np.mean(residuals_t ** 2)) + K * np.log(n)
+            history.append([threshold, BIC, K])
+        history = sorted(history, key = lambda x: x[1])
+
+        best_threshold, score, best_K = history[0]
+        print("Psi.shape is {} but only using {} basis functions based on BIC chosen threshold".format(Psi.shape, best_K))
+        solver.reset_threshold(best_threshold)
 
     c_norm = solver.coef_
 
@@ -320,7 +343,15 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
         # indicate which ones those are.
         if sigma.shape[0] != len(c_norm):
              # only valid for sklearn ARDRegression
+
+             #Skelarn ARD
+            if "threshold_lambda" in solver.__dict__:
+                threshold_lambda = solver.threshold_lambda
             included_c = solver.lambda_ < solver.threshold_lambda
+            #BRM from Noam and Chucks
+            else:
+                included_c = abs(solver.coef_) > 1e-15
+
             assert sigma.shape[0] == sum(included_c)
 
             sigma_full = np.zeros((len(c_norm), len(c_norm)), dtype=sigma.dtype)
