@@ -42,8 +42,21 @@ def test_T_P_ramps_and_per_config_params(fit_data, monkeypatch, tmp_path):
     # check something about tau_rel ramp?
 
 
+def test_no_test_frac(fit_data, monkeypatch, tmp_path):
+    # just make sure it doesn't fail
+    _, _, E0s, _, _ = fit_data
+
+    fixed_basis_info = {"r_cut": 5.5, "smoothness_prior": ("algebraic", 3)}
+
+    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 12))}
+    basis_dependency_source_target = ("cor_order", "maxdeg")
+    do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
+                T_K=[(100, 1000)], P_GPa=[(0.05, 0.2), (0.1, 0.2)], tau_rel=[(0.05, 0.2)], n_iters=2, test_fraction=0.0)
+
+
+
 def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
-                T_K=1000.0, P_GPa=None, tau_rel=0.2):
+                T_K=1000.0, P_GPa=None, tau_rel=0.2, n_iters=10, test_fraction=0.3):
     monkeypatch.chdir(tmp_path)
 
     np.random.seed(10)
@@ -58,8 +71,6 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
     solver = BayesianRidge(fit_intercept=False, compute_score=True)
 
     print("calling HAL with range limited optimize_params", optimize_params)
-
-    n_iters = 10
 
     # copy per-config params
     starting_configs = [at.copy() for at in fit_configs]
@@ -81,11 +92,11 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
     if isinstance(tau_rel, list):
         tau_rel = 0.2
 
-    new_fit_configs, basis_info, new_test_configs = HAL(
+    HAL_results = HAL(
             fit_configs, starting_configs, basis_source, solver,
             fit_kwargs={"E0s": E0s, "data_keys": data_keys, "weights": weights, "Fmax": 20.0},
             n_iters=n_iters, ref_calc=EMT(),
-            traj_len=1000, dt=1.0, tol=0.4, tau_rel=0.3, T_K=T_K, P_GPa=P_GPa,
+            traj_len=1000, dt_fs=1.0, tol=0.4, tau_rel=0.3, T_K=T_K, P_GPa=P_GPa,
             swap_step_interval=10,
             basis_optim_kwargs={"n_trials": 20,
                                 "max_basis_len": 400,
@@ -93,10 +104,16 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
                                 "optimize_params": optimize_params,
                                 "seed": 5},
             basis_optim_interval=5, file_root="test_HAL",
-            test_fraction=0.3)
+            test_fraction=test_fraction)
 
-    assert len(new_fit_configs) < n_iters
-    assert len(new_test_configs) > 0
+    if test_fraction > 0:
+        new_fit_configs, basis_info, new_test_configs = HAL_results
+        assert len(new_fit_configs) < n_iters
+        assert len(new_test_configs) > 0
+    else:
+        new_fit_configs, basis_info = HAL_results
+        new_test_configs = []
+        assert len(new_fit_configs) == n_iters
 
     # make sure the right number of files are present
     # matching numbers of configs
