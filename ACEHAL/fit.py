@@ -347,7 +347,7 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
              #Skelarn ARD
             if "threshold_lambda" in solver.__dict__:
                 threshold_lambda = solver.threshold_lambda
-            included_c = solver.lambda_ < solver.threshold_lambda
+                included_c = solver.lambda_ < solver.threshold_lambda
             #BRM from Noam and Chucks
             else:
                 included_c = abs(solver.coef_) > 1e-15
