@@ -309,8 +309,7 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
             solver.reset_threshold(threshold)
             coef_t = np.array(solver.coef_)
             residuals_t = Psi@coef_t-Y
-            included_c = solver.var_c_ > (solver.var_c_min * threshold)
-            K = sum(included_c)
+            K = np.sum(solver.var_c_ > (solver.var_c_min * solver.threshold))
             BIC = n * np.log(np.mean(residuals_t ** 2)) + K * np.log(n)
             history.append([threshold, BIC, K])
         history = sorted(history, key = lambda x: x[1])
