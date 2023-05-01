@@ -4,6 +4,9 @@ import optuna
 from optuna.samplers import TPESampler
 from optuna.study import MaxTrialsCallback
 from optuna.trial import TrialState
+from optuna.samplers import GridSampler
+from optuna.samplers import RandomSampler
+from optuna.samplers import BruteForceSampler
 
 import timeout_decorator
 from timeout_decorator.timeout_decorator import TimeoutError
@@ -203,7 +206,7 @@ def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kw
 
         return trial_score
 
-    study = optuna.create_study(sampler=TPESampler(seed=seed), direction='minimize')
+    study = optuna.create_study(sampler=BruteForceSampler(seed=seed), direction='minimize')
 
     for guess in addl_guesses:
         guess_dict = guess.copy()
