@@ -309,7 +309,7 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
             solver.reset_threshold(threshold)
             coef_t = np.array(solver.coef_)
             residuals_t = Psi@coef_t-Y
-            K = np.sum(solver.var_c_ > (solver.var_c_min * solver.threshold))
+            K = np.sum(abs(coef_t) > 1e-15)
             BIC = n * np.log(np.mean(residuals_t ** 2)) + K * np.log(n)
             history.append([threshold, BIC, K])
         history = sorted(history, key = lambda x: x[1])
@@ -350,7 +350,7 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
                 included_c = solver.lambda_ < solver.threshold_lambda
             #BRM from Noam and Chucks
             else:
-                included_c = solver.var_c_ > (solver.var_c_min * solver.threshold)
+                included_c = abs(solver.coef_) > 1e-15
 
             print("K = {}".format(sum(included_c)))
             assert sigma.shape[0] == sum(included_c)
