@@ -147,7 +147,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
     if len(test_configs) > 0 or test_fraction > 0:
         error_configs.append(("test", test_configs))
     print("INITIAL FIT ERROR TABLE")
-    print(viz.error_table(error_configs, committee_calc, fit_kwargs["data_keys"]))
+    print(viz.error_table(error_configs, committee_calc, fit_kwargs["data_keys"]).to_string())
     sys.stdout.flush()
 
     # prepare lists for new configs
@@ -341,7 +341,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             if len(test_configs + new_test_configs) > 0 or test_fraction > 0:
                 error_configs.append(("test", test_configs + new_test_configs))
             print("FIT ERROR TABLE")
-            print(viz.error_table(error_configs, committee_calc, fit_kwargs["data_keys"]))
+            print(viz.error_table(error_configs, committee_calc, fit_kwargs["data_keys"]).to_string())
             print("TIMING fit", time.time() - t0)
 
     # return fit configs, final basis_info, and optionally test configs
