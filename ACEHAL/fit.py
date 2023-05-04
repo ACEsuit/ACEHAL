@@ -17,7 +17,7 @@ ASEAtoms = Main.eval("ASEAtoms(a) = ASE.ASEAtoms(a)")
 from .ace_committee_calc import ACECommittee
 
 
-def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=None, n_committee=8,
+def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=10.0, n_committee=8,
         rng=None, pot_file=None, data_save_label=None, return_linear_problem=False, report_errors=True,
         verbose=False):
     """Fit an ACE model with a committee from a list of Atoms
@@ -38,8 +38,8 @@ def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=None, n_co
         dict with Atoms.info (energy, virial) and Atoms.arrays (forces) keys
     weights: dict{'E' / 'F' / 'V' / 'E_per_atom' / 'V_per_atom': float}
         default weights for each property in the fitting
-    Fmax: float, default None
-        max force magnitude above which to drop force from fitting problem
+    Fmax: float, default 10.0
+        max force magnitude above which to drop individual force and config energy from fitting problem
     n_committee: int, default 8
         number of members in committee
     rng: numpy Generator, default None
@@ -118,7 +118,7 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
         and (for forces) per-atom weights in Atoms.info or Atoms.arrays,
         respective, fields named data_keys[prop] + "_weight"
     Fmax: float, default None
-        max force magnitude above which to ignore
+        max force magnitude above which to ignore (also skipping config E and V)
         NOTE: should this be a more general mask?
 
     Returns
@@ -131,7 +131,14 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
     Y = []
     prop_row_inds = {'E': [], 'F': [], 'V': []}
 
-    if data_keys.get("E") in at.info:
+    # check any |F| > Fmax, so we can also skip energy and virial
+    Fmax_exceeded = False
+    if data_keys.get("F") in at.arrays:
+        F = at.arrays[data_keys["F"]]
+        if Fmax is not None:
+            Fmax_exceeded = np.any(np.linalg.norm(F, axis=1) > Fmax)
+
+    if not Fmax_exceeded and data_keys.get("E") in at.info:
         # N_B
         E_B = np.array(energy(B, convert(ASEAtoms(at))))
         if np.any(np.isnan(E_B)):
@@ -158,9 +165,8 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
             ase.io.write(sys.stderr, at, format="extxyz")
             raise ValueError("NaN constructing design matrix for forces " + str(np.isnan(F_B)))
 
-        # filter F <= Fmax
-        F = at.arrays[data_keys["F"]]
-        if Fmax is not None:
+        # filter for only F <= Fmax
+        if Fmax_exceeded:
             F_filter = np.linalg.norm(F, axis=1) <= Fmax
         else:
             F_filter = [True] * len(F)
@@ -183,7 +189,7 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
 
         prop_row_inds['F'].extend(np.arange(len(Y) - F.size, len(Y)))
 
-    if data_keys.get("V") in at.info:
+    if not Fmax_exceeded and data_keys.get("V") in at.info:
         # N_B x 3 x 3
         V_B = np.array(virial(B, convert(ASEAtoms(at))))
         if np.any(np.isnan(V_B)):
