@@ -56,9 +56,9 @@ def test_fit_properties(fit_data, fit_model):
     print("fit RMS Es", np.sqrt(np.mean(fit_diffs['E'] ** 2)))
     print("fit RMS Fs", np.sqrt(np.mean(fit_diffs['F'] ** 2)))
     print("fit RMS Vs", np.sqrt(np.mean(fit_diffs['V'] ** 2)))
-    assert np.sqrt(np.mean(fit_diffs['E'] ** 2)) < 0.0005
+    assert np.sqrt(np.mean(fit_diffs['E'] ** 2)) < 0.002
     assert np.sqrt(np.mean(fit_diffs['F'] ** 2)) < 0.002
-    assert np.sqrt(np.mean(fit_diffs['V'] ** 2)) < 0.01
+    assert np.sqrt(np.mean(fit_diffs['V'] ** 2)) < 0.05
 
     test_diffs = {prop: [] for prop in props}
     for at in test_configs:

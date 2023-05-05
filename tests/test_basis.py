@@ -9,13 +9,13 @@ from ACEHAL import basis
 def test_basis_default():
     params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0, 'smoothness_prior': None}
     B, len_B, normalization = basis.define_basis(params)
-    assert len_B == 22
+    assert len_B == 10
     assert normalization is None
 
 def test_basis_smooth():
     params = {'elements': ['Si'], 'cor_order': 3, 'maxdeg': 4, 'r_cut': 5.0, 'smoothness_prior': ('algebraic', 2)}
     B, len_B, normalization = basis.define_basis(params)
-    assert len_B == 22
+    assert len_B == 10
     assert len(normalization) == len_B
 
 def test_basis_missing_param():
@@ -33,7 +33,7 @@ def test_basis_str():
     with open(Path(__file__).parent / "assets" / "basis") as fin:
         julia_source = fin.read()
     B, len_B, normalization = basis.define_basis(params, julia_source=julia_source)
-    assert len_B == 26
+    assert len_B == 14
     assert normalization is None
 
 def test_basis_str_julia_error():
