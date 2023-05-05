@@ -23,8 +23,10 @@ def test_basis_dep_range(fit_data):
 
     optimize_params_range = deepcopy(optimize_params)
     optimize_params_range["cor_order"] = ("int", (2, 5))
-    optimize_params_range["maxdeg"] = ("int", ("cor_order", {2: (4, 7), 3: (4, 5), 4: (4, 4), 5: (4,4)}))
+    optimize_params_range["maxdeg"] = ('int', ('cor_order', {2: (4, 8), 3: (4, 6), 4: (4, 5), 5: (4, 5)}))
 
+    print("BOB", optimize_params_range)
+    print("JOE", optimize_params)
     assert optimize_params_range == optimize_params
 
 

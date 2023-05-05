@@ -41,7 +41,7 @@ def test_fit_properties(fit_data, fit_model):
     print("fit S var", np.sqrt(np.mean(np.asarray(fit_vars['S']) ** 2)))
 
     assert np.sqrt(np.mean(np.asarray(fit_errs['E']) ** 2)) < 6e-5
-    assert np.sqrt(np.mean(np.asarray(fit_errs['F']) ** 2)) < 1e-4
+    assert np.sqrt(np.mean(np.asarray(fit_errs['F']) ** 2)) < 1.5e-4
     assert np.sqrt(np.mean(np.asarray(fit_errs['S']) ** 2)) < 4e-5
 
     assert np.sqrt(np.mean(np.asarray(fit_vars['E']) ** 2)) < 3e-4

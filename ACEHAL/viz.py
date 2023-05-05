@@ -38,9 +38,11 @@ def error_table(config_sets, calc, data_keys):
             raise ValueError("Got config_set containing something other than list(Atoms) or (str, list(Atoms))")
 
         if len(atoms_list) == 0:
+            index.append(f"{label}")
             err_data["E/at"].append(np.nan)
             err_data["F"].append(np.nan)
             err_data["V/at"].append(np.nan)
+
             continue
 
         E_err = {"ALL": []}
