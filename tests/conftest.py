@@ -62,7 +62,7 @@ def fit_data():
         at.info["REF_virial_weight"] = 1.0 / len(at)
 
     data_keys = {'E': 'REF_energy', 'F': 'REF_forces', 'V': 'REF_virial'}
-    weights = {'E' : 10.0, 'F': 1.0, 'V': 1.0}
+    weights = {'E_per_atom' : 10.0, 'F': 1.0, 'V_per_sqrt_atom': 1.0}
 
     ## less data, worse transferability
     fit_configs = fit_configs[0:3]

@@ -36,7 +36,7 @@ def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=None, n_co
         dict of atomic energies for each species
     data_keys: dict{'E' / 'F' / 'V': str}
         dict with Atoms.info (energy, virial) and Atoms.arrays (forces) keys
-    weights: dict{'E' / 'F' / 'V' / 'E_per_atom' / 'E_per_rt_atom' / 'V_per_atom' / 'V_per_rt_atoms' : float}
+    weights: dict{'E' / 'F' / 'V' / 'E_per_atom' / 'E_per_sqrt_atom' / 'V_per_atom' / 'V_per_sqrt_atoms' : float}
         weights for each property in the fitting (on quantity, quantity divided
         by number of atoms, or quantity divided by root number of atoms).
         Multiplied by per-config and (for forces) per-atom weights in Atoms.info or 
@@ -116,7 +116,7 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
         dict with atomic energy offsets for each species
     data_keys: dict{str: str}
         dict with Atoms.info/Atoms.arrays key for 'E', 'F', 'V'
-    weights: dict{'E' / 'F' / 'V' / 'E_per_atom' / 'E_per_rt_atom' / 'V_per_atom' / 'V_per_rt_atoms' : float}
+    weights: dict{'E' / 'F' / 'V' / 'E_per_atom' / 'E_per_sqrt_atom' / 'V_per_atom' / 'V_per_sqrt_atoms' : float}
         weights for each property in the fitting (on quantity, quantity divided
         by number of atoms, or quantity divided by root number of atoms).
         Multiplied by per-config and (for forces) per-atom weights in Atoms.info or 
@@ -146,10 +146,10 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
             weight_E = weights["E"]
         elif "E_per_atom" in weights:
             weight_E = weights["E_per_atom"] / len(at)
-        elif "E_per_rt_atom" in weights:
-            weight_E = weights["E_per_rt_atom"] / np.sqrt(len(at))
+        elif "E_per_sqrt_atom" in weights:
+            weight_E = weights["E_per_sqrt_atom"] / np.sqrt(len(at))
         else:
-            raise ValueError("Need E or E_per_atom or E_per_rt_atom in weights")
+            raise ValueError("Need E or E_per_atom or E_per_sqrt_atom in weights")
         weight_E *= at.info.get(data_keys["E"] + "_weight", 1.0)
         Psi.append(weight_E * E_B)
         Y.append(weight_E * (at.info[data_keys["E"]] - np.sum([at.symbols.count(sym) * E0 for sym, E0 in E0s.items()])))
@@ -208,10 +208,10 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
             weight_V = weights["V"]
         elif "V_per_atom" in weights:
             weight_V = weights["V_per_atom"] / len(at)
-        elif "V_per_rt_atom" in weights:
-            weight_V = weights["V_per_rt_atom"] / np.sqrt(len(at))
+        elif "V_per_sqrt_atom" in weights:
+            weight_V = weights["V_per_sqrt_atom"] / np.sqrt(len(at))
         else:
-            raise ValueError("Need V or V_per_atom or V_per_rt_atom in weights")
+            raise ValueError("Need V or V_per_atom or V_per_sqrt_atom in weights")
         weight_V *= at.info.get(data_keys["V"] + "_weight", 1.0)
         Psi.extend(weight_V * V_B.T)
         Y.extend(weight_V * V)
