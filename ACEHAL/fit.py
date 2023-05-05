@@ -138,6 +138,9 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
         if Fmax is not None:
             Fmax_exceeded = np.any(np.linalg.norm(F, axis=1) > Fmax)
 
+    if Fmax_exceeded:
+        warnings.warn("Fmax exceeded for a configuration, omitting specific force as well as entire configuration's energy and virial")
+
     if not Fmax_exceeded and data_keys.get("E") in at.info:
         # N_B
         E_B = np.array(energy(B, convert(ASEAtoms(at))))
