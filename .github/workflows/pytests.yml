@@ -46,6 +46,8 @@ jobs:
           ls $JULIA_PROJECT
           julia -e 'using Pkg; Pkg.Registry.add("General"); Pkg.Registry.add(Pkg.RegistrySpec(url = "https://github.com/ACEsuit/ACEregistry"))'
           julia -e 'using Pkg; Pkg.instantiate()'
+          echo "Project.toml content"
+          cat $JULIA_PROJECT/Project.toml
 
       - name: Install dependencies from pip
         run: pip install wheel setuptools flake8 pytest pytest-cov scikit-learn

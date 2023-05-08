@@ -37,31 +37,53 @@ def error_table(config_sets, calc, data_keys):
         else:
             raise ValueError("Got config_set containing something other than list(Atoms) or (str, list(Atoms))")
 
-        index.append(label)
-
         if len(atoms_list) == 0:
+            index.append(f"{label}")
             err_data["E/at"].append(np.nan)
             err_data["F"].append(np.nan)
             err_data["V/at"].append(np.nan)
+
             continue
 
-        E_err = []
-        F_err = []
-        V_err = []
+        E_err = {"ALL": []}
+        F_err = {"ALL": []}
+        V_err = {"ALL": []}
         for at in atoms_list:
+            error_group = at.info.get("error_group")
             at.calc = calc
             if data_keys["E"] in at.info:
-                E_err.append((at.get_potential_energy() - at.info[data_keys["E"]]) / len(at))
+                E_err_item = (at.get_potential_energy() - at.info[data_keys["E"]]) / len(at)
+                E_err["ALL"].append(E_err_item)
+                if error_group is not None:
+                    if error_group not in E_err:
+                        E_err[error_group] = []
+                    E_err[error_group].append(E_err_item)
             if data_keys["F"] in at.arrays:
-                F_err.extend((at.get_forces() - at.arrays[data_keys["F"]]).reshape((-1)))
+                F_err_item = (at.get_forces() - at.arrays[data_keys["F"]]).reshape((-1))
+                F_err["ALL"].extend(F_err_item)
+                if error_group is not None:
+                    if error_group not in F_err:
+                        F_err[error_group] = []
+                    F_err[error_group].extend(F_err_item)
             if data_keys["V"] in at.info:
-                V_err.extend(full_3x3_to_voigt_6_stress(- at.get_volume() * at.get_stress(voigt=False) - at.info[data_keys["V"]]) / len(at))
-        E_err = np.asarray(E_err)
-        F_err = np.asarray(F_err)
-        V_err = np.asarray(V_err)
-        err_data["E/at"].append(np.sqrt(np.mean(E_err ** 2)))
-        err_data["F"].append(np.sqrt(np.mean(F_err ** 2)))
-        err_data["V/at"].append(np.sqrt(np.mean(V_err ** 2)))
+                V_err_item = full_3x3_to_voigt_6_stress(- at.get_volume() * at.get_stress(voigt=False) - at.info[data_keys["V"]]) / len(at)
+                V_err["ALL"].extend(V_err_item)
+                if error_group is not None:
+                    if error_group not in V_err:
+                        V_err[error_group] = []
+                    V_err[error_group].extend(V_err_item)
+
+        for error_group in E_err:
+            if label is None:
+                index.append(error_group)
+            else:
+                index.append(label + " " + error_group)
+            E_err_group = np.asarray(E_err[error_group])
+            F_err_group = np.asarray(F_err[error_group])
+            V_err_group = np.asarray(V_err[error_group])
+            err_data["E/at"].append(np.sqrt(np.mean(E_err_group ** 2)))
+            err_data["F"].append(np.sqrt(np.mean(F_err_group ** 2)))
+            err_data["V/at"].append(np.sqrt(np.mean(V_err_group ** 2)))
 
     return pd.DataFrame(err_data, index=index)
 
