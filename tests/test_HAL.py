@@ -12,6 +12,7 @@ from ase.atoms import Atoms
 from ACEHAL.HAL import HAL
 from sklearn.linear_model import BayesianRidge
 from ACEHAL.optimize_basis import basis_dependency_range_max
+from ACEHAL.bayes_regress_max import BayesianRegressionMax
 
 
 def test_T_P_ramps_and_per_config_params(fit_data, monkeypatch, tmp_path):
@@ -22,7 +23,8 @@ def test_T_P_ramps_and_per_config_params(fit_data, monkeypatch, tmp_path):
 
     optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 12))}
     basis_dependency_source_target = ("cor_order", "maxdeg")
-    do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
+    solver = BayesianRidge(fit_intercept=False, compute_score=True)
+    do_HAL_test(solver, None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
                 T_K=[(100, 1000)], P_GPa=[(0.05, 0.2), (0.1, 0.2)], tau_rel=[(0.05, 0.2)])
 
     # make sure temperature ramped up
@@ -50,12 +52,26 @@ def test_no_test_frac(fit_data, monkeypatch, tmp_path):
 
     optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 12))}
     basis_dependency_source_target = ("cor_order", "maxdeg")
-    do_HAL_test(None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
+
+    solver = BayesianRidge(fit_intercept=False, compute_score=True)
+    do_HAL_test(solver, None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
+                T_K=[(100, 1000)], P_GPa=[(0.05, 0.2), (0.1, 0.2)], tau_rel=[(0.05, 0.2)], n_iters=2, test_fraction=0.0)
+
+def test_bayes_regress_max(fit_data, monkeypatch, tmp_path):
+    # just make sure it doesn't fail
+    _, _, E0s, _, _ = fit_data
+
+    fixed_basis_info = {"r_cut": 5.5, "smoothness_prior": ("algebraic", 3)}
+
+    optimize_params = {"cor_order": ("int", (2, 3)), "maxdeg": ("int", (4, 12))}
+    basis_dependency_source_target = ("cor_order", "maxdeg")
+
+    solver = BayesianRegressionMax()
+    do_HAL_test(solver, None, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
                 T_K=[(100, 1000)], P_GPa=[(0.05, 0.2), (0.1, 0.2)], tau_rel=[(0.05, 0.2)], n_iters=2, test_fraction=0.0)
 
 
-
-def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
+def do_HAL_test(solver, basis_source, fixed_basis_info, optimize_params, basis_dependency_source_target, fit_data, monkeypatch, tmp_path,
                 T_K=1000.0, P_GPa=None, tau_rel=0.2, n_iters=10, test_fraction=0.3):
     monkeypatch.chdir(tmp_path)
 
@@ -67,8 +83,6 @@ def do_HAL_test(basis_source, fixed_basis_info, optimize_params, basis_dependenc
     # filter allowed ranges to avoid exceeding max len
     basis_dependency_range_max({"julia_source": basis_source}, fixed_basis_info, optimize_params, 200,
                                basis_dependency_source_target[0], basis_dependency_source_target[1])
-
-    solver = BayesianRidge(fit_intercept=False, compute_score=True)
 
     print("calling HAL with range limited optimize_params", optimize_params)
 
