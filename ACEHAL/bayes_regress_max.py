@@ -224,7 +224,7 @@ class BayesianRegressionMax(RegressorMixin, LinearModel):
         elif self.transformation == "square":
             return self.var_c_min + x_c ** 2, self.var_e_min + x[-1] ** 2
         else:
-            raise ValueError(f"Unknown transformation {transformation}")
+            raise ValueError(f"Unknown transformation {self.transformation}")
 
 
     def _var_c_e_grad(self, x, g):
@@ -247,7 +247,7 @@ class BayesianRegressionMax(RegressorMixin, LinearModel):
         elif self.transformation == "square":
             return 2.0 * x * g
         else:
-            raise ValueError(f"Unknown transformation {transformation}")
+            raise ValueError(f"Unknown transformation {self.transformation}")
 
 
     def _mask(self, x, ard_tol=None):
@@ -644,7 +644,7 @@ class BayesianRegressionMax(RegressorMixin, LinearModel):
             x_c_0 = self.var_c_0 ** 0.5
             x_e_0 = self.var_e_0 ** 0.5
         else:
-            raise ValueError(f"Unknown transformation {transformation}")
+            raise ValueError(f"Unknown transformation {self.transformation}")
 
         # one var_c per coefficient + var_e
         x0 = np.append(x_c_0, [x_e_0])
