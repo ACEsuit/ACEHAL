@@ -284,7 +284,7 @@ def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None):
 
     if n_configs_excl > 0:
         warnings.warn(f"assemble_Psi_Y excl {n_configs_excl} configs energy and virial values due "
-                      f"to a total of {n_forces_excl} atoms with forces > Fmax = {Fmax}")
+                      f"to a total of {n_atoms_excl} atoms with forces > Fmax = {Fmax}")
     return np.asarray(Psi), np.asarray(Y), prop_row_inds
 
 
