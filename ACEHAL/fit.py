@@ -275,6 +275,33 @@ def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None):
     return np.asarray(Psi), np.asarray(Y), prop_row_inds
 
 
+def selected_ARD_coefs(solver):
+    """Determine coefs included by ARD selection
+
+    Parameters
+    ----------
+    solver: sklearn or bayes_regress_max solver
+        solver to query for included coefs
+
+    Returns
+    -------
+    dof_mask nparray(dtype=bool) mask of coefs included
+    """
+    try:
+        # BayesianRegressionMax
+        included_c = solver.mask_
+    except AttributeError:
+        try:
+            # sklearn.linear_model.ARDRegression
+            # ugly, depends on knowing its internal algorithm
+            included_c = solver.lambda_ < solver.threshold_lambda
+        except AttributeError:
+            # sklearn.linear_model.BayesianRidge or other things
+            included_c = np.asarray([True] * len(solver.coef_))
+
+    return included_c
+
+
 def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_file=None, rng=None, verbose=False):
     """fit an ACE committee model to a design matrix and RHS
 
@@ -338,8 +365,7 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
         # sklearn ARDRegression solver returns sigma only for selected features, but does not explicitly
         # indicate which ones those are.
         if sigma.shape[0] != len(c_norm):
-            # only valid for sklearn ARDRegression
-            included_c = solver.lambda_ < solver.threshold_lambda
+            included_c = selected_ARD_coefs(solver)
             assert sigma.shape[0] == sum(included_c)
 
             sigma_full = np.zeros((len(c_norm), len(c_norm)), dtype=sigma.dtype)

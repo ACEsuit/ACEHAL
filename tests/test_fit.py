@@ -2,6 +2,9 @@ import numpy as np
 
 from ase.constraints import full_3x3_to_voigt_6_stress
 
+from sklearn.linear_model import BayesianRidge, ARDRegression
+from ACEHAL.bayes_regress_max import BayesianRegressionMax
+
 from ACEHAL import fit
 
 
@@ -30,6 +33,17 @@ def test_fit_residuals(fit_data, fit_model_all_info):
 
     assert fit_residual < 0.005
     assert test_residual > 0.0007
+
+
+def test_fit_solvers(fit_data, fit_model_all_info):
+    _, Psi, Y, coef, prop_row_inds, n_obs, (B, B_len, B_norm) = fit_model_all_info
+    fit_configs, test_configs, E0s, data_keys, weights = fit_data
+
+    for solver in [BayesianRidge(), ARDRegression(),
+                   BayesianRegressionMax(method="BRR"), BayesianRegressionMax(method="BRR_SVD"),
+                   BayesianRegressionMax(method="ARD"), BayesianRegressionMax(method="ARD", optimize_threshold=np.logspace(-3, 4, 70))]:
+        print("solver", type(solver), getattr(solver, "method", None))
+        fit.fit(fit_configs, solver, (B, B_len, B_norm), E0s, data_keys, weights)
 
 
 def test_fit_properties(fit_data, fit_model):
