@@ -49,6 +49,8 @@ class BayesianRegressionMax(RegressorMixin, LinearModel):
         method for scipy.optimize.minimize
     transformation: str, default "square"
         function relating optimization parameters and variances
+    optimize_threshold: list(float), default None
+        Optimize threshold after fit by maximizing BIC on grid of values specified.  Only supported by method == "ARD". 
     options: dict
         options to scipy.optimize.minimize
     verbose: bool, default False
@@ -70,7 +72,7 @@ class BayesianRegressionMax(RegressorMixin, LinearModel):
     def __init__(self, *, method="BRR", n_iter=1000, tol=1.0e-6, ftol=None, gtol=None, xtol=None,
                  var_c_min=1e-6, var_e_min=1e-6, var_c_0=0.1, var_e_0=0.1,
                  threshold=None, optim_method="BFGS", transformation="square",
-                 options={}, verbose=False, ard_conv_plot=None):
+                 optimize_threshold=None, options={}, verbose=False, ard_conv_plot=None):
         assert method in ["BRR", "BRR_SVD", "ARD"]
         self.method = method
         self.n_iter = n_iter
@@ -95,6 +97,7 @@ class BayesianRegressionMax(RegressorMixin, LinearModel):
         self.optim_method = optim_method
         self.verbose = verbose
         self.transformation = transformation
+        self.optimize_threshold = tuple(optimize_threshold) if optimize_threshold is not None else None
         self.options = options.copy()
         self._result_x = None
 
@@ -196,6 +199,23 @@ class BayesianRegressionMax(RegressorMixin, LinearModel):
             self.lambda_ = 1.0 / self.var_c_
         else:
             self.reset_threshold(self.ard_tol)
+
+        if self.optimize_threshold is not None:
+            if "ARD" not in self.method:
+                raise ValueError(f"Got optimize_threshold {self.optimize_threshold} but method {self.method} is not ARD")
+            n = self.X.shape[0]
+            threshold_trials = []
+            for threshold_t in self.optimize_threshold:
+                self.reset_threshold(threshold_t)
+                residuals_t = self.X @ self.coef_ - self.y
+                K = np.sum(self.mask_)
+                BIC = n * np.log(np.mean(residuals_t ** 2)) + K * np.log(n)
+                threshold_trials.append([threshold_t, BIC, K])
+            threshold_trials = sorted(threshold_trials, key = lambda x: x[1])
+
+            best_threshold, _, best_K = threshold_trials[0]
+            warnings.warn(f"X.shape is {self.X.shape} but only using {best_K} basis functions based on BIC chosen threshold {best_threshold}")
+            self.reset_threshold(best_threshold)
 
         return self
 
