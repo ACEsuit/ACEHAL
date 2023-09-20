@@ -314,6 +314,22 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
 
     solver.fit(Psi_norm, Y)
 
+    if type(solver).__name__ == 'BayesianRegressionMax' and solver.method == "ARD":
+        n, K = Psi.shape
+        history = []
+        for threshold in np.logspace(-3, 4, 70):
+            solver.reset_threshold(threshold)
+            coef_t = np.array(solver.coef_)
+            residuals_t = Psi@coef_t-Y
+            K = np.sum(solver.var_c_ > (solver.var_c_min * solver.threshold))
+            BIC = n * np.log(np.mean(residuals_t ** 2)) + K * np.log(n)
+            history.append([threshold, BIC, K])
+        history = sorted(history, key = lambda x: x[1])
+
+        best_threshold, score, best_K = history[0]
+        print("Psi.shape is {} but only using {} basis functions based on BIC chosen threshold".format(Psi.shape, best_K))
+        solver.reset_threshold(best_threshold)
+
     c_norm = solver.coef_
 
     # undo normalization in coefficients, so users of solver outside this function will
@@ -339,7 +355,7 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
         # indicate which ones those are.
         if sigma.shape[0] != len(c_norm):
             # only valid for sklearn ARDRegression
-            included_c = solver.lambda_ < solver.threshold_lambda
+            included_c = solver.var_c_ > (solver.var_c_min * solver.threshold)
             assert sigma.shape[0] == sum(included_c)
 
             sigma_full = np.zeros((len(c_norm), len(c_norm)), dtype=sigma.dtype)
