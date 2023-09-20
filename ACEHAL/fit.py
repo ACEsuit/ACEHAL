@@ -321,8 +321,7 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
             solver.reset_threshold(threshold)
             coef_t = np.array(solver.coef_)
             residuals_t = Psi@coef_t-Y
-            K = np.sum(solver.var_c_ > (solver.var_c_min * solver.threshold))
-            BIC = n * np.log(np.mean(residuals_t ** 2)) + K * np.log(n)
+            BIC = n * np.log(np.mean(residuals_t ** 2)) + (solver.mask_ * np.log(n))
             history.append([threshold, BIC, K])
         history = sorted(history, key = lambda x: x[1])
 
@@ -354,8 +353,12 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
         # sklearn ARDRegression solver returns sigma only for selected features, but does not explicitly
         # indicate which ones those are.
         if sigma.shape[0] != len(c_norm):
-            # only valid for sklearn ARDRegression
-            included_c = solver.var_c_ > (solver.var_c_min * solver.threshold)
+            try:
+                # BayesianRegressionMax
+                included_c = solver.mask_
+            except AttributeError:
+                # sklearn.ARDRegression
+                included_c = solver.lambda_ < solver.threshold_lambda
             assert sigma.shape[0] == sum(included_c)
 
             sigma_full = np.zeros((len(c_norm), len(c_norm)), dtype=sigma.dtype)
