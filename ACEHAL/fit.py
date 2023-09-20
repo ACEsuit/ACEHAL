@@ -139,6 +139,9 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
     Y = []
     prop_row_inds = {'E': [], 'F': [], 'V': []}
 
+    n_configs_excluded = 0
+    n_atoms_excluded = 0
+
     # check any |F| > Fmax, so we can also skip energy and virial
     Fmax_exceeded = False
     if data_keys.get("F") in at.arrays:
