@@ -132,20 +132,29 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
     Psi: numpy array (N_data, N_basis) design matrix
     Y: numpy array (N_data) right hand side
     prop_row_inds: dict('E' / 'F' / 'V' : list(int)) indices of rows corresponding to E, F, and V quantities
+    n_configs_excluded: int number of configs E & V excluded by Fmax
+    n_atoms_excluded: int number of atoms F excluded by Fmax
     """
     Psi = []
     Y = []
     prop_row_inds = {'E': [], 'F': [], 'V': []}
+
+    n_configs_excluded = 0
+    n_atoms_excluded = 0
 
     # check any |F| > Fmax, so we can also skip energy and virial
     Fmax_exceeded = False
     if data_keys.get("F") in at.arrays:
         F = at.arrays[data_keys["F"]]
         if Fmax is not None:
-            Fmax_exceeded = np.any(np.linalg.norm(F, axis=1) > Fmax)
+            Fmax_exceeded = np.linalg.norm(F, axis=1) > Fmax
+            n_atoms_excluded = sum(Fmax_exceeded)
+            Fmax_exceeded = np.any(Fmax_exceeded)
+            n_configs_excluded = int(Fmax_exceeded)
 
-    if Fmax_exceeded:
-        warnings.warn("Fmax exceeded for a configuration, omitting specific force as well as entire configuration's energy and virial")
+    # replaced by single warning for entire matrix assembly
+    # if Fmax_exceeded:
+        # warnings.warn("Fmax exceeded for a configuration, omitting specific force as well as entire configuration's energy and virial")
 
     if not Fmax_exceeded and data_keys.get("E") in at.info:
         # N_B
@@ -229,7 +238,7 @@ def _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=None):
 
         prop_row_inds['V'].extend(np.arange(len(Y) - V.size, len(Y)))
 
-    return Psi, Y, prop_row_inds
+    return Psi, Y, prop_row_inds, n_configs_excluded, n_atoms_excluded
 
 
 def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None):
@@ -264,14 +273,21 @@ def assemble_Psi_Y(ats, B, E0s, data_keys, weights, Fmax=None):
     Y = []
     prop_row_inds = {'E': [], 'F': [], 'V': []}
     last_Y_len = 0
+    n_configs_excl = 0
+    n_atoms_excl = 0
     for at in ats:
-        Psi_sec, Y_sec, prop_row_inds_sec = _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=Fmax)
+        Psi_sec, Y_sec, prop_row_inds_sec, n_configs_excl_sec, n_atoms_excl_sec = _Psi_Y_section(at, B, E0s, data_keys, weights, Fmax=Fmax)
         Psi.extend(Psi_sec)
         Y.extend(Y_sec)
         for p in prop_row_inds:
             prop_row_inds[p].extend([ind + last_Y_len for ind in prop_row_inds_sec[p]])
         last_Y_len = len(Y)
+        n_configs_excl += n_configs_excl_sec
+        n_atoms_excl += n_atoms_excl_sec
 
+    if n_configs_excl > 0:
+        warnings.warn(f"assemble_Psi_Y excl {n_configs_excl} configs energy and virial values due "
+                      f"to a total of {n_atoms_excl} atoms with forces > Fmax = {Fmax}")
     return np.asarray(Psi), np.asarray(Y), prop_row_inds
 
 

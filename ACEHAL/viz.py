@@ -13,12 +13,24 @@ from ACEHAL.bias_calc import BiasCalculator
 from ase.constraints import full_3x3_to_voigt_6_stress
 
 
-def error_table(config_sets, calc, data_keys):
+def error_table(config_sets, calc, data_keys, Fmax=10.0):
     """Create a pandas DataFrame error table
+
     Parameters
     ----------
     config_sets: list((str, list(Atoms)))
         list of labels 
+    calc: calculator
+        calculator to use
+    data_keys: dict(str: str)
+        dict of keys (values) to use for reference energy ("E"), force ("F"), and virial ("V")
+    Fmax: float, default 10.0
+        max force - if exceeded, exclude that atom's force as well as entire configurations energy and virial
+        (like fit)
+
+    Returns
+    -------
+    df: pandas.DataFrame with report
     """
     err_data = {"E/at": [], "F": [], "V/at": []}
     index = []
@@ -51,7 +63,14 @@ def error_table(config_sets, calc, data_keys):
         for at in atoms_list:
             error_group = at.info.get("error_group")
             at.calc = calc
-            if data_keys["E"] in at.info:
+
+            F = at.get_forces()
+            if Fmax is not None:
+                F_exceeded = np.linalg.norm(F, axis=1) > Fmax
+            else:
+                F_exceeded = [False] * len(at)
+
+            if data_keys["E"] in at.info and not np.any(F_exceeded):
                 E_err_item = (at.get_potential_energy() - at.info[data_keys["E"]]) / len(at)
                 E_err["ALL"].append(E_err_item)
                 if error_group is not None:
@@ -59,14 +78,15 @@ def error_table(config_sets, calc, data_keys):
                         E_err[error_group] = []
                     E_err[error_group].append(E_err_item)
             if data_keys["F"] in at.arrays:
-                F_err_item = (at.get_forces() - at.arrays[data_keys["F"]]).reshape((-1))
+                F_err_item = (F - at.arrays[data_keys["F"]])[~F_exceeded].reshape((-1))
                 F_err["ALL"].extend(F_err_item)
                 if error_group is not None:
                     if error_group not in F_err:
                         F_err[error_group] = []
                     F_err[error_group].extend(F_err_item)
-            if data_keys["V"] in at.info:
-                V_err_item = full_3x3_to_voigt_6_stress(- at.get_volume() * at.get_stress(voigt=False) - at.info[data_keys["V"]]) / len(at)
+            if data_keys["V"] in at.info and not np.any(F_exceeded):
+                V_err_item = full_3x3_to_voigt_6_stress(- at.get_volume() * at.get_stress(voigt=False) -
+                                                        at.info[data_keys["V"]]) / len(at)
                 V_err["ALL"].extend(V_err_item)
                 if error_group is not None:
                     if error_group not in V_err:
