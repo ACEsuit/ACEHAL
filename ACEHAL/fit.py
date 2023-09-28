@@ -375,15 +375,15 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, c_prior=None, basis_normalizat
 
     c_norm = solver.coef_
 
+    if c_prior is not None:
+        c_norm += c_prior
+
     # undo normalization in coefficients, so users of solver outside this function will
     # get consistent ones
     if basis_normalization is not None:
         c = solver.coef_ / basis_normalization
     else:
         c = solver.coef_
-
-    if c_prior is not None:
-        c += c_prior
 
     if verbose:
         print("fitting got nonzero coeffs", len(np.nonzero(c)[0]))
@@ -425,9 +425,6 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, c_prior=None, basis_normalizat
             comms /= basis_normalization
     else:
         comms = None
-
-    if c_prior is not None:
-        comms += c_prior
 
     Main.E0s = E0s
     Main.ref_pot = Main.eval("refpot = OneBody(" + "".join([" :{} => {}, ".format(key, value) for key, value in E0s.items()]) + ")")
