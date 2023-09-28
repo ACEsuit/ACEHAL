@@ -24,7 +24,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
          traj_len, dt_fs, tol, tau_rel, T_K, P_GPa=None, cell_fixed_shape=False, T_timescale_fs=100, tol_eps=0.1, tau_hist=100,
          cell_step_interval=10, swap_step_interval=0, cell_step_mag=0.01,
          default_basis_info=None, basis_optim_kwargs=None, basis_optim_interval=None,
-         file_root=None, traj_interval=10, test_configs=[], test_fraction=0.0):
+         file_root=None, dimer_data=None, traj_interval=10, test_configs=[], test_fraction=0.0):
     """Iterate with hyperactive learning
 
     Parameters
@@ -87,6 +87,8 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         between re-optimizing basis, None to only optimize in initial step.
     file_root: str / Path, default None
         base part of path to all saved files (trajectory, potential, new config, plots)
+    dimer_data: list(Atoms)
+        dimer data to use as prior information
     traj_interval: int, default 10
         interval between trajectory snapshots
     test_configs: list(Atoms), default []
@@ -141,7 +143,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
 
     # initial fit
     t0 = time.time()
-    committee_calc = _fit(fit_configs, solver, fit_kwargs, B_len_norm, file_root, _HAL_label(0))
+    committee_calc = _fit(fit_configs, solver, fit_kwargs, B_len_norm, file_root, dimer_data, _HAL_label(0))
     print("TIMING initial_fit", time.time() - t0)
     error_configs = [("fit", fit_configs)]
     if len(test_configs) > 0 or test_fraction > 0:
@@ -336,7 +338,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             t0 = time.time()
             # re-fit (whether because of new config or new basis or both)
             # label potential with next iteration, since that's when it will be used
-            committee_calc = _fit(fit_configs + new_fit_configs, solver, fit_kwargs, B_len_norm, file_root, _HAL_label(iter_HAL + 1))
+            committee_calc = _fit(fit_configs + new_fit_configs, solver, fit_kwargs, B_len_norm, file_root, dimer_data, _HAL_label(iter_HAL + 1))
             error_configs = [("fit", fit_configs + new_fit_configs)]
             if len(test_configs + new_test_configs) > 0 or test_fraction > 0:
                 error_configs.append(("test", test_configs + new_test_configs))
@@ -379,7 +381,7 @@ def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_k
     return basis_info
 
 
-def _fit(fit_configs, solver, fit_kwargs, B_len_norm, file_root, HAL_label):
+def _fit(fit_configs, solver, fit_kwargs, B_len_norm, file_root, dimer_data, HAL_label):
     """Do a fit
 
     Parameters
@@ -394,6 +396,8 @@ def _fit(fit_configs, solver, fit_kwargs, B_len_norm, file_root, HAL_label):
         basis, its length, and optional normalization vector returned by define_basis
     file_root: str / Path
         root part of path used to save potential
+    dimer_data: list(Atoms)
+        dimer data to use as prior information
     HAL_label: str
         label added to file_root for filenames
 
@@ -404,7 +408,7 @@ def _fit(fit_configs, solver, fit_kwargs, B_len_norm, file_root, HAL_label):
     # no calculator defined, fit one with the current fitting configs and basis
     pot_filename = str(file_root.parent / (file_root.name + f".pot.{HAL_label}.json"))
 
-    committee_calc = fit(atoms_list=fit_configs, solver=solver, B_len_norm=B_len_norm,
+    committee_calc = fit(atoms_list=fit_configs, dimer_data=dimer_data, solver=solver, B_len_norm=B_len_norm,
                          return_linear_problem=False, pot_file=pot_filename, **fit_kwargs)
 
     plot_dimers_file = file_root.parent / (file_root.name + f".dimers.{HAL_label}.pdf")

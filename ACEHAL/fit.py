@@ -19,7 +19,7 @@ ASEAtoms = Main.eval("ASEAtoms(a) = ASE.ASEAtoms(a)")
 from .ace_committee_calc import ACECommittee
 
 
-def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=10.0, n_committee=8,
+def fit(atoms_list, dimer_data, solver, B_len_norm, E0s, data_keys, weights, Fmax=10.0, n_committee=8,
         rng=None, pot_file=None, data_save_label=None, return_linear_problem=False, report_errors=True,
         verbose=False):
     """Fit an ACE model with a committee from a list of Atoms
@@ -28,6 +28,8 @@ def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=10.0, n_co
     ----------
     atoms_list: list(Atoms)
         atomic configurations to fit
+    dimer_data: list(Atoms)
+        dimer data to use as prior information
     solver: sklearn-compatible LinearSolver
         solvers for the linear problem
     B_len_norm: (julia basis object, int, array(float) / None)
@@ -68,10 +70,24 @@ def fit(atoms_list, solver, B_len_norm, E0s, data_keys, weights, Fmax=10.0, n_co
         Psi, Y, coef: numpy array(float) design matrix, RHS and coefficients 
         prop_row_inds: dict('E' / 'F' / 'V': list(int)) with indices of Psi and Y rows corresponding to each type of property
     """
-    Psi, Y, prop_row_inds = assemble_Psi_Y(atoms_list, B_len_norm[0], E0s, data_keys, weights, Fmax=Fmax)
+    if dimer_data is None:
+        Psi, Y, prop_row_inds = assemble_Psi_Y(atoms_list, B_len_norm[0], E0s, data_keys, weights, Fmax=Fmax)
 
-    calc, coef = do_fit(Psi, Y, B_len_norm[0], E0s, solver, n_committee=n_committee, basis_normalization=B_len_norm[2],
-                        pot_file=pot_file, rng=rng, verbose=verbose)
+        calc, coef = do_fit(Psi, Y, B_len_norm[0], E0s, solver, n_committee=n_committee, basis_normalization=B_len_norm[2],
+                            pot_file=pot_file, rng=rng, verbose=verbose)
+    else:
+        print("fitting dimer data to define prior")
+        Psi_prior, Y_prior, prop_row_inds = assemble_Psi_Y(dimer_data, B_len_norm[0], E0s, data_keys, weights, Fmax=data_keys["Fmax"])
+
+        calc, c_prior = do_fit(Psi_prior, Y_prior, B_len_norm[0], E0s, solver, n_committee=0, basis_normalization=B_len_norm[2],
+                    pot_file=None, rng=None, verbose=True)
+        
+        Psi, Y, prop_row_inds = assemble_Psi_Y(atoms_list, B_len_norm[0], E0s, data_keys, weights, Fmax=data_keys["Fmax"])
+
+        Y_sub = Y - (Psi @ c_prior)
+
+        calc, coef = do_fit(Psi, Y_sub, B_len_norm[0], E0s, solver, n_committee=n_committee, c_prior=c_prior, basis_normalization=B_len_norm[2],
+                            pot_file=pot_file, rng=rng, verbose=verbose)
 
     if report_errors:
         try:
@@ -318,7 +334,7 @@ def selected_ARD_coefs(solver):
     return included_c
 
 
-def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_file=None, rng=None, verbose=False):
+def do_fit(Psi, Y, B, E0s, solver, n_committee=8, c_prior=None, basis_normalization=None, pot_file=None, rng=None, verbose=False):
     """fit an ACE committee model to a design matrix and RHS
 
     Parameters
@@ -366,6 +382,9 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
     else:
         c = solver.coef_
 
+    if c_prior is not None:
+        c += c_prior
+
     if verbose:
         print("fitting got nonzero coeffs", len(np.nonzero(c)[0]))
         try:
@@ -406,6 +425,9 @@ def do_fit(Psi, Y, B, E0s, solver, n_committee=8, basis_normalization=None, pot_
             comms /= basis_normalization
     else:
         comms = None
+
+    if c_prior is not None:
+        comms += c_prior
 
     Main.E0s = E0s
     Main.ref_pot = Main.eval("refpot = OneBody(" + "".join([" :{} => {}, ".format(key, value) for key, value in E0s.items()]) + ")")
