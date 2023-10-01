@@ -94,7 +94,7 @@ class StopWhenTrialKeepFailingCallback:
         if self._consecutive_failed_count >= self.threshold:
             study.stop()
 
-def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kwargs, fixed_basis_info=None, max_basis_len=None,
+def optimize(solver, fitting_db, dimer_data, n_trials, optimize_params, basis_kwargs, fit_kwargs, fixed_basis_info=None, max_basis_len=None,
              score="BIC", timeout=600, addl_guesses=[], seed=None):
     """optimize the basis by maximizing a score over a number of optuna trials
 
@@ -175,7 +175,7 @@ def optimize(solver, fitting_db, n_trials, optimize_params, basis_kwargs, fit_kw
             fit_kwargs_use["report_errors"] = False
         else:
             fit_kwargs_use = fit_kwargs
-        calc, Psi, Y, coef, _ = fit(fitting_db, solver, B_len_norm, return_linear_problem=True, **fit_kwargs_use)
+        calc, Psi, Y, coef, _ = fit(fitting_db, dimer_data, solver, B_len_norm, return_linear_problem=True, **fit_kwargs_use)
 
         n = Psi.shape[0]
 

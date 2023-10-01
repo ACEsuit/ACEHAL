@@ -133,7 +133,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         B_len_norm = define_basis(default_basis_info, basis_source)
     elif basis_optim_kwargs is not None:
         t0 = time.time()
-        basis_info = _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_kwargs)
+        basis_info = _optimize_basis(fit_configs, dimer_data, basis_source, solver, fit_kwargs, basis_optim_kwargs)
         B_len_norm = define_basis(basis_info, basis_source)
         print("TIMING initial_basis_optim", time.time() - t0)
     else:
@@ -326,7 +326,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
             iter_HAL % basis_optim_interval == basis_optim_interval - 1):
             t0 = time.time()
             # optimize basis
-            basis_info = _optimize_basis(fit_configs + new_fit_configs, basis_source, solver, fit_kwargs,
+            basis_info = _optimize_basis(fit_configs + new_fit_configs, dimer_data, basis_source, solver, fit_kwargs,
                                          basis_optim_kwargs)
             print("HAL got optimized basis", basis_info)
             B_len_norm = define_basis(basis_info, basis_source)
@@ -353,7 +353,7 @@ def HAL(fit_configs, traj_configs, basis_source, solver, fit_kwargs, n_iters, re
         return new_fit_configs, basis_info
 
 
-def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_kwargs):
+def _optimize_basis(fit_configs, dimer_data, basis_source, solver, fit_kwargs, basis_optim_kwargs):
     """Optimize a basis
 
     Parameters
@@ -374,7 +374,7 @@ def _optimize_basis(fit_configs, basis_source, solver, fit_kwargs, basis_optim_k
     basis_info dict with parameters that can be passed to define_basis()
     """
     # do the optimization
-    basis_info = optimize(solver=solver, fitting_db=fit_configs,
+    basis_info = optimize(solver=solver, fitting_db=fit_configs, dimer_data=dimer_data,
             basis_kwargs={"julia_source": basis_source},
             fit_kwargs=fit_kwargs, **basis_optim_kwargs)
 
